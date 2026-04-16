@@ -108,19 +108,19 @@ export default function PaymentsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">المدفوعات والمعاملات</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">تتبع المدفوعات الواردة والمصروفات</p>
+          <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-200">المدفوعات والمعاملات</h1>
+          <p className="text-slate-600 dark:text-slate-400 mt-2">تتبع المدفوعات الواردة والمصروفات</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={exportToExcel}>
+          <Button variant="outline" onClick={exportToExcel} className="border-slate-200 dark:border-slate-700">
             <Download className="w-4 h-4 ml-2" />
             تصدير Excel
           </Button>
-          <Button onClick={handleAdd}>
+          <Button onClick={handleAdd} className="bg-blue-600 hover:bg-blue-700">
             <Plus className="w-4 h-4 ml-2" />
             تسجيل معاملة
           </Button>
@@ -129,33 +129,40 @@ export default function PaymentsPage() {
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">إجمالي الإيرادات</CardTitle>
-            <ArrowDownLeft className="h-4 w-4 text-green-500" />
+            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">إجمالي الإيرادات</CardTitle>
+            <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+              <ArrowDownLeft className="h-4 w-4 text-green-600 dark:text-green-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatCurrency(totalIncome)}</div>
+            <div className="text-3xl font-bold text-green-600 dark:text-green-400">{formatCurrency(totalIncome)}</div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">ما تم تحصيله</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">إجمالي المصروفات</CardTitle>
-            <ArrowUpRight className="h-4 w-4 text-red-500" />
+            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">إجمالي المصروفات</CardTitle>
+            <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg">
+              <ArrowUpRight className="h-4 w-4 text-red-600 dark:text-red-400" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{formatCurrency(totalExpenses)}</div>
+            <div className="text-3xl font-bold text-red-600 dark:text-red-400">{formatCurrency(totalExpenses)}</div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">ما تم صرفه</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">الرصيد</CardTitle>
-            <div className={`h-4 w-4 rounded-full ${balance >= 0 ? "bg-green-500" : "bg-red-500"}`} />
+            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">الرصيد</CardTitle>
+            <div className={`w-3 h-3 rounded-full ${balance >= 0 ? "bg-green-500" : "bg-red-500"}`} />
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${balance >= 0 ? "text-green-600" : "text-red-600"}`}>
+            <div className={`text-3xl font-bold ${balance >= 0 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}`}>
               {formatCurrency(balance)}
             </div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">{balance >= 0 ? "فائض" : "عجز"}</p>
           </CardContent>
         </Card>
       </div>
@@ -163,7 +170,7 @@ export default function PaymentsPage() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
             placeholder="بحث في المعاملات..."
             value={searchTerm}

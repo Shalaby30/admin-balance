@@ -223,19 +223,19 @@ export default function JobsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">الأعمال</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">تتبع وإدارة أعمال التركيب والصيانة</p>
+          <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-200">الأعمال</h1>
+          <p className="text-slate-600 dark:text-slate-400 mt-2">تتبع وإدارة أعمال التركيب والصيانة</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={exportToExcel}>
+          <Button variant="outline" onClick={exportToExcel} className="border-slate-200 dark:border-slate-700">
             <Download className="w-4 h-4 ml-2" />
             تصدير Excel
           </Button>
-          <Button onClick={handleAdd}>
+          <Button onClick={handleAdd} className="bg-blue-600 hover:bg-blue-700">
             <Plus className="w-4 h-4 ml-2" />
             إضافة عمل
           </Button>
@@ -244,36 +244,40 @@ export default function JobsPage() {
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">إجمالي الأعمال</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">إجمالي الأعمال</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{jobsList.length}</div>
+            <div className="text-3xl font-bold text-slate-900 dark:text-white">{jobsList.length}</div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">عملية مسجلة</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">إجمالي الإيرادات</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">إجمالي الإيرادات</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalRevenue)}</div>
+            <div className="text-3xl font-bold text-slate-900 dark:text-white">{formatCurrency(totalRevenue)}</div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">من جميع الأعمال</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">المدفوع</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">المدفوع</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{formatCurrency(totalPaid)}</div>
+            <div className="text-3xl font-bold text-green-600 dark:text-green-400">{formatCurrency(totalPaid)}</div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">تم تحصيله</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">المستحق</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">المستحق</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{formatCurrency(totalUnpaid)}</div>
+            <div className="text-3xl font-bold text-red-600 dark:text-red-400">{formatCurrency(totalUnpaid)}</div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">قيد التحصيل</p>
           </CardContent>
         </Card>
       </div>

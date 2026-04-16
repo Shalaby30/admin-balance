@@ -123,19 +123,19 @@ export default function ClientsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">العملاء والمباني</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">إدارة بيانات العملاء والمباني والمصاعد</p>
+          <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-200">العملاء والمباني</h1>
+          <p className="text-slate-600 dark:text-slate-400 mt-2">إدارة بيانات العملاء والمباني</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={exportToExcel}>
+          <Button variant="outline" onClick={exportToExcel} className="border-slate-200 dark:border-slate-700">
             <Download className="w-4 h-4 ml-2" />
             تصدير Excel
           </Button>
-          <Button onClick={handleAddClient}>
+          <Button onClick={handleAddClient} className="bg-blue-600 hover:bg-blue-700">
             <Plus className="w-4 h-4 ml-2" />
             إضافة عميل
           </Button>
@@ -143,15 +143,69 @@ export default function ClientsPage() {
       </div>
 
       {/* Summary Card */}
-      <div className="grid gap-4 md:grid-cols-1">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">إجمالي العملاء</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalClients}</div>
-          </CardContent>
-        </Card>
+      <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">إجمالي العملاء</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-4xl font-bold text-slate-900 dark:text-white">{totalClients}</div>
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">عميل مسجل في النظام</p>
+        </CardContent>
+      </Card>
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+        <Input
+          placeholder="بحث عن عميل أو مبنى..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pr-10 border-slate-200 dark:border-slate-700 dark:bg-slate-800"
+        />
+      </div>
+
+      {/* Clients Table */}
+      <Card className="border-0 shadow-lg overflow-hidden">
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+                  <TableHead className="text-slate-700 dark:text-slate-300 font-semibold">اسم العميل</TableHead>
+                  <TableHead className="text-slate-700 dark:text-slate-300 font-semibold">اسم المبنى</TableHead>
+                  <TableHead className="text-slate-700 dark:text-slate-300 font-semibold">نوع المبنى</TableHead>
+                  <TableHead className="text-slate-700 dark:text-slate-300 font-semibold">الهاتف</TableHead>
+                  <TableHead className="text-slate-700 dark:text-slate-300 font-semibold">البريد الإلكتروني</TableHead>
+                  <TableHead className="text-slate-700 dark:text-slate-300 font-semibold">العنوان</TableHead>
+                  <TableHead className="text-slate-700 dark:text-slate-300 font-semibold">الإجراءات</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredClients.map((client) => (
+                  <TableRow key={client.id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                    <TableCell className="font-semibold text-slate-900 dark:text-white">{client.name}</TableCell>
+                    <TableCell className="text-slate-700 dark:text-slate-300">{client.buildingName}</TableCell>
+                    <TableCell><Badge className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs">{client.buildingType}</Badge></TableCell>
+                    <TableCell className="text-slate-700 dark:text-slate-300">{client.phone}</TableCell>
+                    <TableCell className="text-sm text-slate-600 dark:text-slate-400">{client.email}</TableCell>
+                    <TableCell className="text-sm text-slate-600 dark:text-slate-400">{client.address}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => handleEditClient(client)} className="hover:bg-blue-100 dark:hover:bg-blue-900/20">
+                          <Edit2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(client.id)} className="hover:bg-red-100 dark:hover:bg-red-900/20">
+                          <Trash2 className="h-4 w-4 text-red-500 dark:text-red-400" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
       </div>
 
       {/* Search */}

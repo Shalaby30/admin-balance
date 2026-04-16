@@ -163,19 +163,19 @@ export default function InventoryPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">المخزون</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">إدارة قطع الغيار والمستلزمات</p>
+          <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-200">المخزون</h1>
+          <p className="text-slate-600 dark:text-slate-400 mt-2">إدارة قطع الغيار والمستلزمات</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={exportToExcel}>
+          <Button variant="outline" onClick={exportToExcel} className="border-slate-200 dark:border-slate-700">
             <Download className="w-4 h-4 ml-2" />
             تصدير Excel
           </Button>
-          <Button onClick={handleAdd}>
+          <Button onClick={handleAdd} className="bg-blue-600 hover:bg-blue-700">
             <Plus className="w-4 h-4 ml-2" />
             إضافة صنف
           </Button>
@@ -184,20 +184,22 @@ export default function InventoryPage() {
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">إجمالي مصاريف المخزون - {selectedMonth}</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">إجمالي مصاريف المخزون - {selectedMonth}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalValue)}</div>
+            <div className="text-3xl font-bold text-slate-900 dark:text-white">{formatCurrency(totalValue)}</div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">قيمة إجمالية</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">عدد المصاريف</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">عدد الأصناف</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalItems}</div>
+            <div className="text-3xl font-bold text-slate-900 dark:text-white">{totalItems}</div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">صنف مسجل</p>
           </CardContent>
         </Card>
       </div>
@@ -205,24 +207,24 @@ export default function InventoryPage() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
             placeholder="بحث عن صنف..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pr-10"
+            className="pr-10 border-slate-200 dark:border-slate-700 dark:bg-slate-800"
           />
         </div>
         <Input
           type="month"
           value={selectedMonth}
           onChange={(e) => setSelectedMonth(e.target.value)}
-          className="w-40"
+          className="w-40 border-slate-200 dark:border-slate-700 dark:bg-slate-800"
         />
         <select
           value={selectedCategory}
           onChange={(e) => setSelectedCategory(e.target.value)}
-          className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900"
+          className="h-10 rounded-lg border border-slate-300 bg-white px-3 text-sm dark:border-slate-700 dark:bg-slate-900"
         >
           <option value="all">جميع الفئات</option>
           {categories.map((cat) => (

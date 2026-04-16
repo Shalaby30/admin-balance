@@ -211,19 +211,19 @@ export default function EmployeesPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">الموظفين والرواتب</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">إدارة بيانات الموظفين وحساب الرواتب</p>
+          <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-700 dark:from-white dark:to-slate-200">الموظفين والرواتب</h1>
+          <p className="text-slate-600 dark:text-slate-400 mt-2">إدارة بيانات الموظفين وحساب الرواتب</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={exportToExcel}>
+          <Button variant="outline" onClick={exportToExcel} className="border-slate-200 dark:border-slate-700">
             <Download className="w-4 h-4 ml-2" />
             تصدير Excel
           </Button>
-          <Button onClick={handleAdd}>
+          <Button onClick={handleAdd} className="bg-blue-600 hover:bg-blue-700">
             <Plus className="w-4 h-4 ml-2" />
             إضافة موظف
           </Button>
@@ -232,36 +232,40 @@ export default function EmployeesPage() {
 
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        <Card>
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">إجمالي الرواتب</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">إجمالي الرواتب</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalSalaries)}</div>
+            <div className="text-3xl font-bold text-slate-900 dark:text-white">{formatCurrency(totalSalaries)}</div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">للشهر المحدد</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">الرواتب الأساسية</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">الرواتب الأساسية</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalBase)}</div>
+            <div className="text-3xl font-bold text-slate-900 dark:text-white">{formatCurrency(totalBase)}</div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">{employeesList.length} موظف</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">المكافآت</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">المكافآت</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">+{formatCurrency(totalBonuses)}</div>
+            <div className="text-3xl font-bold text-green-600 dark:text-green-400">+{formatCurrency(totalBonuses)}</div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">إجمالي المكافآت</p>
           </CardContent>
         </Card>
-        <Card>
+        <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">الخصومات</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-300">الخصومات</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">-{formatCurrency(totalDeductions)}</div>
+            <div className="text-3xl font-bold text-red-600 dark:text-red-400">-{formatCurrency(totalDeductions)}</div>
+            <p className="text-xs text-slate-600 dark:text-slate-400 mt-2">إجمالي الخصومات</p>
           </CardContent>
         </Card>
       </div>
@@ -269,74 +273,76 @@ export default function EmployeesPage() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <Input
             placeholder="بحث عن موظف..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pr-10"
+            className="pr-10 border-slate-200 dark:border-slate-700 dark:bg-slate-800"
           />
         </div>
         <Input
           type="month"
           value={selectedMonth}
           onChange={(e) => setSelectedMonth(e.target.value)}
-          className="w-40"
+          className="w-40 border-slate-200 dark:border-slate-700 dark:bg-slate-800"
         />
       </div>
 
       {/* Employees Table */}
-      <Card>
+      <Card className="border-0 shadow-lg overflow-hidden">
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>الاسم</TableHead>
-                <TableHead>الدور الوظيفي</TableHead>
-                <TableHead>الراتب الأساسي</TableHead>
-                <TableHead>المكافآت</TableHead>
-                <TableHead>الخصومات</TableHead>
-                <TableHead>الراتب النهائي</TableHead>
-                <TableHead>الإجراءات</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredEmployees.map((employee) => (
-                <TableRow key={employee.id}>
-                  <TableCell className="font-medium">{employee.name}</TableCell>
-                  <TableCell>{employee.role}</TableCell>
-                  <TableCell>{formatCurrency(employee.baseSalary)}</TableCell>
-                  <TableCell>
-                    {employee.bonuses > 0 && (
-                      <Badge variant="success">+{formatCurrency(employee.bonuses)}</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {employee.deductions > 0 && (
-                      <Badge variant="danger">-{formatCurrency(employee.deductions)}</Badge>
-                    )}
-                  </TableCell>
-                  <TableCell className="font-bold">{formatCurrency(employee.finalSalary)}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => openAdjustmentDialog(employee, "bonus")} title="إضافة مكافأة">
-                        <Gift className="h-4 w-4 text-green-600" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => openAdjustmentDialog(employee, "deduction")} title="إضافة خصم">
-                        <MinusCircle className="h-4 w-4 text-red-600" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(employee)}>
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(employee.id)} className="text-red-500 hover:text-red-600">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+                  <TableHead className="text-slate-700 dark:text-slate-300 font-semibold">الاسم</TableHead>
+                  <TableHead className="text-slate-700 dark:text-slate-300 font-semibold">الدور الوظيفي</TableHead>
+                  <TableHead className="text-slate-700 dark:text-slate-300 font-semibold">الراتب الأساسي</TableHead>
+                  <TableHead className="text-slate-700 dark:text-slate-300 font-semibold">المكافآت</TableHead>
+                  <TableHead className="text-slate-700 dark:text-slate-300 font-semibold">الخصومات</TableHead>
+                  <TableHead className="text-slate-700 dark:text-slate-300 font-semibold">الراتب النهائي</TableHead>
+                  <TableHead className="text-slate-700 dark:text-slate-300 font-semibold">الإجراءات</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredEmployees.map((employee) => (
+                  <TableRow key={employee.id} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                    <TableCell className="font-semibold text-slate-900 dark:text-white">{employee.name}</TableCell>
+                    <TableCell className="text-slate-700 dark:text-slate-300">{employee.role}</TableCell>
+                    <TableCell className="text-slate-700 dark:text-slate-300">{formatCurrency(employee.baseSalary)}</TableCell>
+                    <TableCell>
+                      {employee.bonuses > 0 && (
+                        <Badge variant="success" className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs">+{formatCurrency(employee.bonuses)}</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {employee.deductions > 0 && (
+                        <Badge variant="danger" className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400 text-xs">-{formatCurrency(employee.deductions)}</Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="font-bold text-slate-900 dark:text-white">{formatCurrency(employee.finalSalary)}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => openAdjustmentDialog(employee, "bonus")} title="إضافة مكافأة" className="hover:bg-green-100 dark:hover:bg-green-900/20">
+                          <Gift className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => openAdjustmentDialog(employee, "deduction")} title="إضافة خصم" className="hover:bg-red-100 dark:hover:bg-red-900/20">
+                          <MinusCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(employee)} className="hover:bg-blue-100 dark:hover:bg-blue-900/20">
+                          <Edit2 className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(employee.id)} className="hover:bg-red-100 dark:hover:bg-red-900/20">
+                          <Trash2 className="h-4 w-4 text-red-500 dark:text-red-400" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
