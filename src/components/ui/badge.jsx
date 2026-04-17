@@ -2,12 +2,12 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 
 const badgeVariants = {
-  default: "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100",
-  secondary: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-100",
-  success: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100",
-  warning: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100",
-  danger: "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-100",
-  outline: "border border-gray-300 text-gray-800 dark:border-gray-700 dark:text-gray-100",
+  default: "bg-blue-300 text-black",
+  secondary: "bg-gray-300 text-black",
+  success: "bg-green-300 text-black",
+  warning: "bg-yellow-300 text-black",
+  danger: "bg-red-300 text-black",
+  outline: "border border-gray-400 text-black",
 };
 
 function Badge({ className, variant = "default", ...props }) {

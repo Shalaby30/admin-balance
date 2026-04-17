@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { CalendarIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +22,9 @@ import { getEmployeeSalaries, salaryAdjustments } from "@/lib/mockData";
 import { formatCurrency } from "@/lib/utils";
 import { Plus, Search, Edit2, Trash2, Download, Gift, MinusCircle } from "lucide-react";
 import * as XLSX from "xlsx";
-
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 // Initial employees data
 const initialEmployees = [
   { id: 1, name: "أحمد محمد", role: "فني تركيب", baseSalary: 4500, phone: "01012345678", joinDate: "2022-01-15" },
@@ -215,8 +218,8 @@ export default function EmployeesPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">الموظفين والرواتب</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">إدارة بيانات الموظفين وحساب الرواتب</p>
+          <h1 className="text-3xl font-bold text-gray-900">الموظفين والرواتب</h1>
+          <p className="text-gray-500 mt-1">إدارة بيانات الموظفين وحساب الرواتب</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={exportToExcel}>
@@ -277,19 +280,41 @@ export default function EmployeesPage() {
             className="pr-10"
           />
         </div>
-        <Input
-          type="month"
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(e.target.value)}
-          className="w-40"
-        />
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-40 justify-start text-right font-normal">
+              <CalendarIcon className="ml-2 h-4 w-4" />
+              {selectedMonth}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={new Date(selectedMonth + "-01")}
+              onSelect={(date) => date && setSelectedMonth(date.toISOString().slice(0, 7))}
+              captionLayout="dropdown"
+              fromYear={2020}
+              toYear={2030}
+              monthsMode={true}
+              className="rounded-md border p-4"
+              classNames={{
+                day: "h-10 w-10 text-base",
+                head_cell: "w-10 text-base",
+                caption_label: "text-base font-semibold",
+                nav_button: "h-10 w-10",
+                dropdowns: "flex gap-2 p-4",
+                dropdown_root: "w-32",
+              }}
+            />
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Employees Table */}
       <Card>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
+          <Table className="border-black">
+            <TableHeader className="border-black">
               <TableRow>
                 <TableHead>الاسم</TableHead>
                 <TableHead>الدور الوظيفي</TableHead>
@@ -403,14 +428,15 @@ export default function EmployeesPage() {
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>نوع التعديل</Label>
-              <select
-                value={adjustmentForm.type}
-                onChange={(e) => setAdjustmentForm({ ...adjustmentForm, type: e.target.value })}
-                className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 dark:border-gray-700 dark:bg-gray-900"
-              >
-                <option value="bonus">مكافأة</option>
-                <option value="deduction">خصم</option>
-              </select>
+              <Select value={adjustmentForm.type} onValueChange={(value) => setAdjustmentForm({ ...adjustmentForm, type: value })}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="bonus">مكافأة</SelectItem>
+                  <SelectItem value="deduction">خصم</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label>المبلغ (جنيه)</Label>
@@ -431,12 +457,12 @@ export default function EmployeesPage() {
             </div>
             <div className="space-y-2">
               <Label>الشهر</Label>
-              <Input
-                type="month"
-                value={selectedMonth}
-                disabled
-                className="bg-gray-100 dark:bg-gray-800"
-              />
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-base px-3 py-1">
+                  <CalendarIcon className="ml-2 h-4 w-4" />
+                  {selectedMonth}
+                </Badge>
+              </div>
               <p className="text-xs text-gray-500">يتم تطبيق التعديل على الشهر المحدد أعلاه</p>
             </div>
           </div>

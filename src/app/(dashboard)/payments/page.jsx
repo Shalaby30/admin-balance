@@ -15,33 +15,37 @@ import {
 } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { transactions, clients, jobs } from "@/lib/mockData";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { Plus, Search, Download, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import { Plus, Search, Download, ArrowDownLeft, ArrowUpRight, Edit2, Trash2 } from "lucide-react";
 import * as XLSX from "xlsx";
 
 export default function PaymentsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState(null);
+  const [transactionsList, setTransactionsList] = useState(transactions);
   const [formData, setFormData] = useState({
     type: "income",
-    clientId: "",
+    clientId: "none",
     amount: "",
     date: "",
     description: "",
   });
 
-  const filteredTransactions = transactions.filter((t) => {
+  const filteredTransactions = transactionsList.filter((t) => {
     const matchesSearch = t.description.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = typeFilter === "all" || t.type === typeFilter;
     return matchesSearch && matchesType;
   });
 
-  const totalIncome = transactions
+  const totalIncome = transactionsList
     .filter((t) => t.type === "income")
     .reduce((sum, t) => sum + t.amount, 0);
-  const totalExpenses = transactions
+  const totalExpenses = transactionsList
     .filter((t) => t.type === "expense")
     .reduce((sum, t) => sum + t.amount, 0);
   const balance = totalIncome - totalExpenses;
@@ -49,7 +53,7 @@ export default function PaymentsPage() {
   const handleAdd = () => {
     setFormData({
       type: "income",
-      clientId: "",
+      clientId: "none",
       amount: "",
       date: new Date().toISOString().split("T")[0],
       description: "",
@@ -57,15 +61,66 @@ export default function PaymentsPage() {
     setIsAddDialogOpen(true);
   };
 
+  const handleEdit = (transaction) => {
+    setEditingTransaction(transaction);
+    setFormData({
+      type: transaction.type,
+      clientId: String(transaction.clientId || "none"),
+      amount: String(transaction.amount),
+      date: transaction.date,
+      description: transaction.description,
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleSaveAdd = () => {
+    const newTransaction = {
+      id: Date.now(),
+      type: formData.type,
+      clientId: formData.clientId && formData.clientId !== "none" ? parseInt(formData.clientId) : null,
+      jobId: null,
+      amount: Number(formData.amount),
+      date: formData.date,
+      description: formData.description,
+    };
+    setTransactionsList([newTransaction, ...transactionsList]);
+    setIsAddDialogOpen(false);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingTransaction) return;
+    const updatedTransactions = transactionsList.map((t) =>
+      t.id === editingTransaction.id
+        ? {
+            ...t,
+            type: formData.type,
+            clientId: formData.clientId && formData.clientId !== "none" ? parseInt(formData.clientId) : null,
+            amount: Number(formData.amount),
+            date: formData.date,
+            description: formData.description,
+          }
+        : t
+    );
+    setTransactionsList(updatedTransactions);
+    setIsEditDialogOpen(false);
+    setEditingTransaction(null);
+  };
+
+  const handleDelete = (id) => {
+    if (confirm("هل أنت متأكد من حذف هذه المعاملة؟")) {
+      setTransactionsList(transactionsList.filter((t) => t.id !== id));
+    }
+  };
+
   const exportToExcel = () => {
     const title = "المعاملات المالية";
     const exportDate = new Date().toLocaleDateString("ar-EG");
 
     // Calculate totals
-    const currentTotalIncome = transactions
+    const currentTotalIncome = transactionsList
       .filter((t) => t.type === "income")
       .reduce((sum, t) => sum + t.amount, 0);
-    const currentTotalExpenses = transactions
+    const currentTotalExpenses = transactionsList
       .filter((t) => t.type === "expense")
       .reduce((sum, t) => sum + t.amount, 0);
     const currentBalance = currentTotalIncome - currentTotalExpenses;
@@ -76,7 +131,7 @@ export default function PaymentsPage() {
       ["تاريخ التصدير:", exportDate], // Date row
       [], // Empty row
       ["التاريخ", "النوع", "الوصف", "المبلغ"], // Headers
-      ...transactions.map((t) => [
+      ...transactionsList.map((t) => [
         formatDate(t.date),
         t.type === "income" ? "إيراد" : "مصروف",
         t.description,
@@ -112,8 +167,8 @@ export default function PaymentsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">المدفوعات والمعاملات</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">تتبع المدفوعات الواردة والمصروفات</p>
+          <h1 className="text-3xl font-bold text-gray-900">المدفوعات والمعاملات</h1>
+          <p className="text-gray-500 mt-1">تتبع المدفوعات الواردة والمصروفات</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={exportToExcel}>
@@ -171,21 +226,22 @@ export default function PaymentsPage() {
             className="pr-10"
           />
         </div>
-        <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
-          className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900"
-        >
-          <option value="all">جميع المعاملات</option>
-          <option value="income">إيرادات فقط</option>
-          <option value="expense">مصروفات فقط</option>
-        </select>
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="جميع المعاملات" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">جميع المعاملات</SelectItem>
+            <SelectItem value="income">إيرادات فقط</SelectItem>
+            <SelectItem value="expense">مصروفات فقط</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Transactions Table */}
       <Card>
         <CardContent className="p-0">
-          <Table>
+          <Table className="border-black">
             <TableHeader>
               <TableRow>
                 <TableHead>التاريخ</TableHead>
@@ -193,6 +249,7 @@ export default function PaymentsPage() {
                 <TableHead>الوصف</TableHead>
                 <TableHead>المبلغ</TableHead>
                 <TableHead>الرصيد التراكمي</TableHead>
+                <TableHead>الإجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -217,6 +274,16 @@ export default function PaymentsPage() {
                       </span>
                     </TableCell>
                     <TableCell className="font-medium">{formatCurrency(runningBalance)}</TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(transaction)}>
+                          <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" onClick={() => handleDelete(transaction.id)}>
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 );
               })}
@@ -235,14 +302,15 @@ export default function PaymentsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>نوع المعاملة</Label>
-                <select
-                  value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 dark:border-gray-700 dark:bg-gray-900"
-                >
-                  <option value="income">إيراد</option>
-                  <option value="expense">مصروف</option>
-                </select>
+                <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="income">إيراد</SelectItem>
+                    <SelectItem value="expense">مصروف</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label>المبلغ</Label>
@@ -256,16 +324,17 @@ export default function PaymentsPage() {
             {formData.type === "income" && (
               <div className="space-y-2">
                 <Label>العميل (اختياري)</Label>
-                <select
-                  value={formData.clientId}
-                  onChange={(e) => setFormData({ ...formData, clientId: e.target.value })}
-                  className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 dark:border-gray-700 dark:bg-gray-900"
-                >
-                  <option value="">اختر العميل</option>
-                  {clients.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
+                <Select value={formData.clientId} onValueChange={(value) => setFormData({ ...formData, clientId: value })}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="اختر العميل" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">اختر العميل</SelectItem>
+                    {clients.map((c) => (
+                      <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
             <div className="space-y-2">
@@ -288,7 +357,77 @@ export default function PaymentsPage() {
             <DialogClose asChild>
               <Button variant="outline">إلغاء</Button>
             </DialogClose>
-            <Button onClick={() => setIsAddDialogOpen(false)}>حفظ</Button>
+            <Button onClick={handleSaveAdd}>حفظ</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Transaction Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>تعديل معاملة</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>نوع المعاملة</Label>
+                <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="income">إيراد</SelectItem>
+                    <SelectItem value="expense">مصروف</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>المبلغ</Label>
+                <Input
+                  type="number"
+                  value={formData.amount}
+                  onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+                />
+              </div>
+            </div>
+            {formData.type === "income" && (
+              <div className="space-y-2">
+                <Label>العميل (اختياري)</Label>
+                <Select value={formData.clientId} onValueChange={(value) => setFormData({ ...formData, clientId: value })}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="اختر العميل" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">اختر العميل</SelectItem>
+                    {clients.map((c) => (
+                      <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label>التاريخ</Label>
+              <Input
+                type="date"
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>الوصف</Label>
+              <Input
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">إلغاء</Button>
+            </DialogClose>
+            <Button onClick={handleSaveEdit}>حفظ التغييرات</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

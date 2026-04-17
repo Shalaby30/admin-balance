@@ -34,7 +34,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto w-16 h-16 bg-blue-600 rounded-xl flex items-center justify-center mb-4">
@@ -79,7 +79,7 @@ export default function LoginPage() {
               {isLoading ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
             </Button>
           </form>
-          <div className="mt-6 p-4 bg-gray-100 dark:bg-gray-800 rounded-lg text-sm text-gray-600 dark:text-gray-400">
+          <div className="mt-6 p-4 bg-gray-100 rounded-lg text-sm text-gray-600">
             <p className="font-medium mb-2">بيانات الدخول الافتراضية:</p>
             <p>اسم المستخدم: admin</p>
             <p>كلمة المرور: admin123</p>

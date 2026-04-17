@@ -17,6 +17,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Search, Edit2, Trash2, Download } from "lucide-react";
 import * as XLSX from "xlsx";
 
@@ -127,8 +128,8 @@ export default function ClientsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">العملاء والمباني</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">إدارة بيانات العملاء والمباني والمصاعد</p>
+          <h1 className="text-3xl font-bold text-gray-900">العملاء والمباني</h1>
+          <p className="text-gray-500 mt-1">إدارة بيانات العملاء والمباني والمصاعد</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={exportToExcel}>
@@ -168,7 +169,7 @@ export default function ClientsPage() {
       {/* Clients Table */}
       <Card>
         <CardContent className="p-0">
-          <Table>
+          <Table className="border-black">
             <TableHeader>
               <TableRow>
                 <TableHead>اسم العميل</TableHead>
@@ -235,17 +236,18 @@ export default function ClientsPage() {
             </div>
             <div className="space-y-2">
               <Label>نوع المبنى</Label>
-              <select
-                value={clientForm.buildingType}
-                onChange={(e) => setClientForm({ ...clientForm, buildingType: e.target.value })}
-                className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 dark:border-gray-700 dark:bg-gray-900"
-              >
-                <option value="سكني">سكني</option>
-                <option value="تجاري">تجاري</option>
-                <option value="طبي">طبي</option>
-                <option value="فندقي">فندقي</option>
-                <option value="تعليمي">تعليمي</option>
-              </select>
+              <Select value={clientForm.buildingType} onValueChange={(value) => setClientForm({ ...clientForm, buildingType: value })}>
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="سكني">سكني</SelectItem>
+                  <SelectItem value="تجاري">تجاري</SelectItem>
+                  <SelectItem value="طبي">طبي</SelectItem>
+                  <SelectItem value="فندقي">فندقي</SelectItem>
+                  <SelectItem value="تعليمي">تعليمي</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>

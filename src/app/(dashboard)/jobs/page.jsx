@@ -16,16 +16,17 @@ import {
 } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 // mockData no longer used - using local state instead
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Plus, Search, Edit2, Trash2, Download, Filter } from "lucide-react";
 import * as XLSX from "xlsx";
 
 const jobTypes = {
-  installation: { label: "تركيب", color: "blue" },
-  maintenance: { label: "صيانة", color: "green" },
-  repair: { label: "إصلاح", color: "yellow" },
-  modernization: { label: "تحديث", color: "purple" },
+  installation: { label: "تركيب", color: "#93c5fd" },  // blue-300
+  maintenance: { label: "صيانة", color: "#86efac" },  // green-300
+  repair: { label: "إصلاح", color: "#fde047" },         // yellow-300
+  modernization: { label: "تحديث", color: "#c4b5fd" },   // purple-300
 };
 
 const statusTypes = {
@@ -62,8 +63,8 @@ export default function JobsPage() {
   ]);
   const [formData, setFormData] = useState({
     type: "installation",
-    clientId: "",
-    buildingId: "",
+    clientId: "none",
+    buildingId: "none",
     description: "",
     cost: "",
     date: "",
@@ -95,8 +96,8 @@ export default function JobsPage() {
     setEditingJob(null);
     setFormData({
       type: "installation",
-      clientId: "",
-      buildingId: "",
+      clientId: "none",
+      buildingId: "none",
       description: "",
       cost: "",
       date: new Date().toISOString().split("T")[0],
@@ -132,7 +133,7 @@ export default function JobsPage() {
           ? {
               ...job,
               type: formData.type,
-              clientId: Number(formData.clientId),
+              clientId: formData.clientId === "none" ? 0 : Number(formData.clientId),
               buildingId: Number(formData.buildingId) || 1,
               description: formData.description,
               cost: Number(formData.cost),
@@ -227,8 +228,8 @@ export default function JobsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">الأعمال</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">تتبع وإدارة أعمال التركيب والصيانة</p>
+          <h1 className="text-3xl font-bold text-gray-900">الأعمال</h1>
+          <p className="text-gray-500 mt-1">تتبع وإدارة أعمال التركيب والصيانة</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={exportToExcel}>
@@ -291,27 +292,29 @@ export default function JobsPage() {
                 className="pr-10"
               />
             </div>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900"
-            >
-              <option value="all">جميع الحالات</option>
-              <option value="in_progress">قيد التنفيذ</option>
-              <option value="completed">مكتمل</option>
-              <option value="stopped">متوقف</option>
-            </select>
-            <select
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900"
-            >
-              <option value="all">جميع الأنواع</option>
-              <option value="installation">تركيب</option>
-              <option value="maintenance">صيانة</option>
-              <option value="repair">إصلاح</option>
-              <option value="modernization">تحديث</option>
-            </select>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-36">
+                <SelectValue placeholder="جميع الحالات" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">جميع الحالات</SelectItem>
+                <SelectItem value="in_progress">قيد التنفيذ</SelectItem>
+                <SelectItem value="completed">مكتمل</SelectItem>
+                <SelectItem value="stopped">متوقف</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-36">
+                <SelectValue placeholder="جميع الأنواع" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">جميع الأنواع</SelectItem>
+                <SelectItem value="installation">تركيب</SelectItem>
+                <SelectItem value="maintenance">صيانة</SelectItem>
+                <SelectItem value="repair">إصلاح</SelectItem>
+                <SelectItem value="modernization">تحديث</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </CardContent>
       </Card>
@@ -319,7 +322,7 @@ export default function JobsPage() {
       {/* Jobs Table */}
       <Card>
         <CardContent className="p-0">
-          <Table>
+          <Table className="border-black">
             <TableHeader>
               <TableRow>
                 <TableHead>النوع</TableHead>
@@ -338,7 +341,7 @@ export default function JobsPage() {
                 return (
                   <TableRow key={job.id}>
                     <TableCell>
-                      <Badge style={{ backgroundColor: jobTypes[job.type]?.color }}>
+                      <Badge className="text-black" style={{ backgroundColor: jobTypes[job.type]?.color }}>
                         {jobTypes[job.type]?.label}
                       </Badge>
                     </TableCell>
@@ -347,12 +350,12 @@ export default function JobsPage() {
                     <TableCell>{formatCurrency(job.cost)}</TableCell>
                     <TableCell>{formatDate(job.date)}</TableCell>
                     <TableCell>
-                      <Badge variant={statusTypes[job.status]?.variant}>
+                      <Badge className="text-black" variant={statusTypes[job.status]?.variant}>
                         {statusTypes[job.status]?.label}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={paymentTypes[job.paymentStatus]?.variant || "default"}>
+                      <Badge className="text-black" variant={paymentTypes[job.paymentStatus]?.variant || "default"}>
                         {paymentTypes[job.paymentStatus]?.label || job.paymentStatus}
                       </Badge>
                     </TableCell>
@@ -387,29 +390,31 @@ export default function JobsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>نوع العمل</Label>
-                <select
-                  value={formData.type}
-                  onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                  className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 dark:border-gray-700 dark:bg-gray-900"
-                >
-                  <option value="installation">تركيب</option>
-                  <option value="maintenance">صيانة</option>
-                  <option value="repair">إصلاح</option>
-                  <option value="modernization">تحديث</option>
-                </select>
+                <Select value={formData.type} onValueChange={(value) => setFormData({ ...formData, type: value })}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="installation">تركيب</SelectItem>
+                    <SelectItem value="maintenance">صيانة</SelectItem>
+                    <SelectItem value="repair">إصلاح</SelectItem>
+                    <SelectItem value="modernization">تحديث</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label>العميل</Label>
-                <select
-                  value={formData.clientId}
-                  onChange={(e) => setFormData({ ...formData, clientId: e.target.value })}
-                  className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 dark:border-gray-700 dark:bg-gray-900"
-                >
-                  <option value="">اختر العميل</option>
-                  {clientsList.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
+                <Select value={formData.clientId} onValueChange={(value) => setFormData({ ...formData, clientId: value })}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="اختر العميل" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">اختر العميل</SelectItem>
+                    {clientsList.map((c) => (
+                      <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="space-y-2">
@@ -440,38 +445,41 @@ export default function JobsPage() {
             <div className="grid grid-cols-3 gap-4">
               <div className="space-y-2">
                 <Label>طريقة الدفع</Label>
-                <select
-                  value={formData.paymentMethod}
-                  onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
-                  className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 dark:border-gray-700 dark:bg-gray-900"
-                >
-                  <option value="cash">كاش</option>
-                  <option value="installment">تقسيط</option>
-                </select>
+                <Select value={formData.paymentMethod} onValueChange={(value) => setFormData({ ...formData, paymentMethod: value })}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="cash">كاش</SelectItem>
+                    <SelectItem value="installment">تقسيط</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label>حالة الدفع</Label>
-                <select
-                  value={formData.paymentStatus}
-                  onChange={(e) => setFormData({ ...formData, paymentStatus: e.target.value })}
-                  className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 dark:border-gray-700 dark:bg-gray-900"
-                >
-                  <option value="paid">مدفوع</option>
-                  <option value="installment">قسط</option>
-                  <option value="unpaid">غير مدفوع</option>
-                </select>
+                <Select value={formData.paymentStatus} onValueChange={(value) => setFormData({ ...formData, paymentStatus: value })}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="paid">مدفوع</SelectItem>
+                    <SelectItem value="installment">قسط</SelectItem>
+                    <SelectItem value="unpaid">غير مدفوع</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
                 <Label>حالة العمل</Label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                  className="w-full h-10 rounded-lg border border-gray-300 bg-white px-3 dark:border-gray-700 dark:bg-gray-900"
-                >
-                  <option value="in_progress">قيد التنفيذ</option>
-                  <option value="completed">مكتمل</option>
-                  <option value="stopped">متوقف</option>
-                </select>
+                <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="in_progress">قيد التنفيذ</SelectItem>
+                    <SelectItem value="completed">مكتمل</SelectItem>
+                    <SelectItem value="stopped">متوقف</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </div>

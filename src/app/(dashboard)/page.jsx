@@ -3,6 +3,14 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+} from "@/components/ui/chart";
 import {
   getFinancialSummary,
   getMonthlyData,
@@ -28,16 +36,19 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
   PieChart,
   Pie,
   Cell,
-  LineChart,
-  Line,
 } from "recharts";
 
-const COLORS = ["#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6"];
+const chartConfig = {
+  revenue: { label: "الإيرادات", color: "#3b82f6" },
+  expenses: { label: "المصروفات", color: "#ef4444" },
+  installation: { label: "تركيب", color: "#3b82f6" },
+  maintenance: { label: "صيانة", color: "#22c55e" },
+  repair: { label: "إصلاح", color: "#f59e0b" },
+  modernization: { label: "تحديث", color: "#8b5cf6" },
+};
 
 export default function DashboardPage() {
   const summary = getFinancialSummary();
@@ -48,25 +59,25 @@ export default function DashboardPage() {
   const recentTransactions = transactions.slice(-5).reverse();
 
   const jobTypeData = [
-    { name: "تركيب", value: jobs.filter((j) => j.type === "installation").length },
-    { name: "صيانة", value: jobs.filter((j) => j.type === "maintenance").length },
-    { name: "إصلاح", value: jobs.filter((j) => j.type === "repair").length },
-    { name: "تحديث", value: jobs.filter((j) => j.type === "modernization").length },
+    { name: "تركيب", value: jobs.filter((j) => j.type === "installation").length, key: "installation" },
+    { name: "صيانة", value: jobs.filter((j) => j.type === "maintenance").length, key: "maintenance" },
+    { name: "إصلاح", value: jobs.filter((j) => j.type === "repair").length, key: "repair" },
+    { name: "تحديث", value: jobs.filter((j) => j.type === "modernization").length, key: "modernization" },
   ];
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">لوحة التحكم</h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-1">نظرة عامة على أداء الشركة</p>
+        <h1 className="text-3xl font-bold text-gray-900">لوحة التحكم</h1>
+        <p className="text-gray-500 mt-1">نظرة عامة على أداء الشركة</p>
       </div>
 
       {/* Stats Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            <CardTitle className="text-sm font-medium text-gray-500">
               إجمالي الإيرادات
             </CardTitle>
             <TrendingUp className="h-4 w-4 text-green-500" />
@@ -85,7 +96,7 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            <CardTitle className="text-sm font-medium text-gray-500">
               إجمالي المصروفات
             </CardTitle>
             <TrendingDown className="h-4 w-4 text-red-500" />
@@ -104,7 +115,7 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            <CardTitle className="text-sm font-medium text-gray-500">
               صافي الربح
             </CardTitle>
             <TrendingUp className="h-4 w-4 text-blue-500" />
@@ -120,7 +131,7 @@ export default function DashboardPage() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            <CardTitle className="text-sm font-medium text-gray-500">
               المبالغ المستحقة
             </CardTitle>
             <AlertCircle className="h-4 w-4 text-yellow-500" />
@@ -133,54 +144,33 @@ export default function DashboardPage() {
       </div>
 
       {/* Charts Row 1 */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 ">
         <Card>
           <CardHeader>
             <CardTitle>الأداء المالي الشهري</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
+            <ChartContainer config={chartConfig} className="h-[300px]">
               <BarChart data={monthlyData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
-                <Tooltip
-                  formatter={(value) => formatCurrency(value)}
-                  contentStyle={{ textAlign: "right" }}
+                <ChartTooltip
+                  content={
+                    <ChartTooltipContent
+                      formatter={(value) => formatCurrency(value)}
+                    />
+                  }
                 />
-                <Bar dataKey="revenue" name="الإيرادات" fill="#3b82f6" />
-                <Bar dataKey="expenses" name="المصروفات" fill="#ef4444" />
+                <Bar dataKey="revenue" fill="var(--color-revenue)" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="expenses" fill="var(--color-expenses)" radius={[4, 4, 0, 0]} />
+                <ChartLegend content={<ChartLegendContent />} />
               </BarChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>توزيع أنواع الأعمال</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <PieChart>
-                <Pie
-                  data={jobTypeData}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  outerRadius={80}
-                  fill="#8884d8"
-                  dataKey="value"
-                >
-                  {jobTypeData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+
       </div>
 
       {/* Quick Stats & Alerts */}
@@ -246,37 +236,35 @@ export default function DashboardPage() {
           <CardTitle>أحدث المعاملات</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-700">
-                  <th className="text-right py-3 px-4">التاريخ</th>
-                  <th className="text-right py-3 px-4">النوع</th>
-                  <th className="text-right py-3 px-4">الوصف</th>
-                  <th className="text-right py-3 px-4">المبلغ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentTransactions.map((transaction) => (
-                  <tr key={transaction.id} className="border-b border-gray-100 dark:border-gray-800">
-                    <td className="py-3 px-4">{formatDate(transaction.date)}</td>
-                    <td className="py-3 px-4">
-                      <Badge variant={transaction.type === "income" ? "success" : "danger"}>
-                        {transaction.type === "income" ? "إيراد" : "مصروف"}
-                      </Badge>
-                    </td>
-                    <td className="py-3 px-4">{transaction.description}</td>
-                    <td className="py-3 px-4 font-medium">
-                      <span className={transaction.type === "income" ? "text-green-600" : "text-red-600"}>
-                        {transaction.type === "income" ? "+" : "-"}
-                        {formatCurrency(transaction.amount)}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table className="border-black">
+            <TableHeader>
+              <TableRow>
+                <TableHead>التاريخ</TableHead>
+                <TableHead>النوع</TableHead>
+                <TableHead>الوصف</TableHead>
+                <TableHead>المبلغ</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {recentTransactions.map((transaction) => (
+                <TableRow key={transaction.id}>
+                  <TableCell>{formatDate(transaction.date)}</TableCell>
+                  <TableCell>
+                    <Badge variant={transaction.type === "income" ? "success" : "danger"}>
+                      {transaction.type === "income" ? "إيراد" : "مصروف"}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>{transaction.description}</TableCell>
+                  <TableCell className="font-medium">
+                    <span className={transaction.type === "income" ? "text-green-600" : "text-red-600"}>
+                      {transaction.type === "income" ? "+" : "-"}
+                      {formatCurrency(transaction.amount)}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </CardContent>
       </Card>
     </div>

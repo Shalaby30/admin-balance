@@ -18,14 +18,14 @@ export const salaryAdjustments = [
 ];
 
 export const spareParts = [
-  { id: 1, name: "سلك كهربائي 10مم", category: "كهربائية", price: 45, quantity: 150, minStock: 20, supplier: "شركة الكهرباء" },
-  { id: 2, name: "محرك مصعد 5 حصان", category: "محركات", price: 3500, quantity: 12, minStock: 3, supplier: "مصاعد عالمية" },
-  { id: 3, name: "بطارية طوارئ 12V", category: "كهربائية", price: 280, quantity: 45, minStock: 10, supplier: "بطاريات القمة" },
-  { id: 4, name: "قاعدة مقصورة", category: "هيكل", price: 1200, quantity: 8, minStock: 5, supplier: "مصاعد عالمية" },
-  { id: 5, name: "أزرار تحكم داخلية", category: "تحكم", price: 180, quantity: 60, minStock: 15, supplier: "تك كنترول" },
-  { id: 6, name: "لوحة تحكم رئيسية", category: "تحكم", price: 2200, quantity: 6, minStock: 2, supplier: "تك كنترول" },
-  { id: 7, name: "كابلات تحكم 20م", category: "كهربائية", price: 320, quantity: 25, minStock: 8, supplier: "شركة الكهرباء" },
-  { id: 8, name: "باب مصرف داخلي", category: "هيكل", price: 850, quantity: 18, minStock: 5, supplier: "مصاعد عالمية" },
+  { id: 1, name: "سلك كهربائي 10مم", category: "كهربائية", wholesalePrice: 35, retailPrice: 45, quantity: 150, minStock: 20, supplier: "شركة الكهرباء" },
+  { id: 2, name: "محرك مصعد 5 حصان", category: "محركات", wholesalePrice: 2800, retailPrice: 3500, quantity: 12, minStock: 3, supplier: "مصاعد عالمية" },
+  { id: 3, name: "بطارية طوارئ 12V", category: "كهربائية", wholesalePrice: 220, retailPrice: 280, quantity: 45, minStock: 10, supplier: "بطاريات القمة" },
+  { id: 4, name: "قاعدة مقصورة", category: "هيكل", wholesalePrice: 950, retailPrice: 1200, quantity: 8, minStock: 5, supplier: "مصاعد عالمية" },
+  { id: 5, name: "أزرار تحكم داخلية", category: "تحكم", wholesalePrice: 140, retailPrice: 180, quantity: 60, minStock: 15, supplier: "تك كنترول" },
+  { id: 6, name: "لوحة تحكم رئيسية", category: "تحكم", wholesalePrice: 1800, retailPrice: 2200, quantity: 6, minStock: 2, supplier: "تك كنترول" },
+  { id: 7, name: "كابلات تحكم 20م", category: "كهربائية", wholesalePrice: 250, retailPrice: 320, quantity: 25, minStock: 8, supplier: "شركة الكهرباء" },
+  { id: 8, name: "باب مصرف داخلي", category: "هيكل", wholesalePrice: 680, retailPrice: 850, quantity: 18, minStock: 5, supplier: "مصاعد عالمية" },
 ];
 
 export const clients = [
@@ -94,7 +94,7 @@ export function getEmployeeSalaries(month = "2024-01") {
 }
 
 export function getInventoryValue() {
-  return spareParts.reduce((sum, part) => sum + (part.price * part.quantity), 0);
+  return spareParts.reduce((sum, part) => sum + ((part.wholesalePrice || part.price || 0) * part.quantity), 0);
 }
 
 export function getLowStockItems() {
@@ -142,7 +142,7 @@ export function getFinancialSummary() {
 }
 
 export function getMonthlyData() {
-  const months = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو"];
+  const months = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
   return months.map((month, index) => {
     const revenue = Math.floor(Math.random() * 50000) + 30000;
     const expenses = Math.floor(Math.random() * 30000) + 20000;

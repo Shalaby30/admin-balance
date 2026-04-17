@@ -1,7 +1,30 @@
 @import "tailwindcss";
 
+/* Months Mode for Calendar - hide day grid */
+.months-mode .rdp-table,
+.months-mode .rdp-head {
+  display: none !important;
+}
+
+.months-mode .rdp-nav {
+  display: none !important;
+}
+
+.months-mode .rdp-dropdowns {
+  padding: 1rem;
+  gap: 0.75rem;
+}
+
+.months-mode .rdp-dropdown_root {
+  width: 120px;
+}
+
+.months-mode .rdp-caption_label {
+  display: none;
+}
+
 :root {
-  --background: #ffffff;
+  --background: black;
   --foreground: #171717;
 }
 
@@ -12,17 +35,7 @@
   --font-mono: var(--font-geist-mono);
 }
 
-.dark {
-  --background: #0a0a0a;
-  --foreground: #ededed;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not(.light) {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* Light mode only - no dark mode */
 
 * {
   box-sizing: border-box;

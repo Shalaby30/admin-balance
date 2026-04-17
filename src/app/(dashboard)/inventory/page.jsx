@@ -17,19 +17,22 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { formatCurrency } from "@/lib/utils";
-import { Plus, Search, Edit2, Trash2, Download } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, Download, CalendarIcon } from "lucide-react";
 import * as XLSX from "xlsx";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // Initial inventory data
 const initialInventory = [
-  { id: 1, name: "سلك كهربائي 1.5مم", category: "كهربائية", price: 15000, quantity: 10, supplier: "شركة القاهرة", month: "2024-01" },
-  { id: 2, name: "محرك مسح 5 حصان", category: "محركات", price: 32000, quantity: 2, supplier: "مصاعد علي", month: "2024-01" },
-  { id: 3, name: "بطارية طوارئ 12V", category: "كهربائية", price: 2800, quantity: 5, supplier: "معدات الفهد", month: "2024-01" },
-  { id: 4, name: "فلاتر زيت", category: "ميكانيكية", price: 1200, quantity: 20, supplier: "مصاعد علي", month: "2024-01" },
-  { id: 5, name: "أزرار تحكم داخلية", category: "تحكم", price: 1800, quantity: 8, supplier: "هي كون", month: "2024-01" },
-  { id: 6, name: "أرجوحة تاكر بلاط", category: "تحكم", price: 2600, quantity: 6, supplier: "هي كون", month: "2024-01" },
-  { id: 7, name: "كابلات شبكة CAT5", category: "اتصالات", price: 3300, quantity: 10, supplier: "تركي أوليد", month: "2024-01" },
-  { id: 8, name: "ريل مصنوع داخلي", category: "ميكانيكية", price: 4800, quantity: 4, supplier: "مصاعد علي", month: "2024-01" },
+  { id: 1, name: "سلك كهربائي 1.5مم", category: "كهربائية", wholesalePrice: 12000, retailPrice: 15000, quantity: 10, supplier: "شركة القاهرة", month: "2024-01" },
+  { id: 2, name: "محرك مسح 5 حصان", category: "محركات", wholesalePrice: 28000, retailPrice: 32000, quantity: 2, supplier: "مصاعد علي", month: "2024-01" },
+  { id: 3, name: "بطارية طوارئ 12V", category: "كهربائية", wholesalePrice: 2200, retailPrice: 2800, quantity: 5, supplier: "معدات الفهد", month: "2024-01" },
+  { id: 4, name: "فلاتر زيت", category: "ميكانيكية", wholesalePrice: 900, retailPrice: 1200, quantity: 20, supplier: "مصاعد علي", month: "2024-01" },
+  { id: 5, name: "أزرار تحكم داخلية", category: "تحكم", wholesalePrice: 1400, retailPrice: 1800, quantity: 8, supplier: "هي كون", month: "2024-01" },
+  { id: 6, name: "أرجوحة تاكر بلاط", category: "تحكم", wholesalePrice: 2000, retailPrice: 2600, quantity: 6, supplier: "هي كون", month: "2024-01" },
+  { id: 7, name: "كابلات شبكة CAT5", category: "اتصالات", wholesalePrice: 2500, retailPrice: 3300, quantity: 10, supplier: "تركي أوليد", month: "2024-01" },
+  { id: 8, name: "ريل مصنوع داخلي", category: "ميكانيكية", wholesalePrice: 3800, retailPrice: 4800, quantity: 4, supplier: "مصاعد علي", month: "2024-01" },
 ];
 
 export default function InventoryPage() {
@@ -42,7 +45,8 @@ export default function InventoryPage() {
   const [formData, setFormData] = useState({
     name: "",
     category: "",
-    totalPrice: "",
+    wholesalePrice: "",
+    retailPrice: "",
     quantity: "",
     supplier: "",
     month: "2024-01",
@@ -58,14 +62,16 @@ export default function InventoryPage() {
     return matchesSearch && matchesCategory && matchesMonth;
   });
 
-  // Calculate totals for the selected month
+  // Calculate totals for the selected month (multiply by quantity)
   const monthItems = inventoryList.filter(p => p.month === selectedMonth);
-  const totalValue = monthItems.reduce((sum, p) => sum + p.price, 0);
+  const totalWholesaleValue = monthItems.reduce((sum, p) => sum + (p.wholesalePrice || 0) * p.quantity, 0);
+  const totalRetailValue = monthItems.reduce((sum, p) => sum + (p.retailPrice || 0) * p.quantity, 0);
+  const totalProfit = totalRetailValue - totalWholesaleValue;
   const totalItems = monthItems.length;
 
   const handleAdd = () => {
     setEditingItem(null);
-    setFormData({ name: "", category: "", totalPrice: "", quantity: "1", supplier: "", month: selectedMonth });
+    setFormData({ name: "", category: "", wholesalePrice: "", retailPrice: "", quantity: "1", supplier: "", month: selectedMonth });
     setIsAddDialogOpen(true);
   };
 
@@ -74,7 +80,8 @@ export default function InventoryPage() {
     setFormData({
       name: item.name,
       category: item.category,
-      totalPrice: item.price.toString(),
+      wholesalePrice: item.wholesalePrice?.toString() || "",
+      retailPrice: item.retailPrice?.toString() || "",
       quantity: item.quantity.toString(),
       supplier: item.supplier,
       month: item.month,
@@ -91,7 +98,8 @@ export default function InventoryPage() {
               ...item, 
               name: formData.name, 
               category: formData.category, 
-              price: Number(formData.totalPrice),
+              wholesalePrice: Number(formData.wholesalePrice),
+              retailPrice: Number(formData.retailPrice),
               quantity: Number(formData.quantity),
               supplier: formData.supplier,
               month: formData.month || selectedMonth,
@@ -105,7 +113,8 @@ export default function InventoryPage() {
         id: newId,
         name: formData.name,
         category: formData.category,
-        price: Number(formData.totalPrice),
+        wholesalePrice: Number(formData.wholesalePrice),
+        retailPrice: Number(formData.retailPrice),
         quantity: Number(formData.quantity) || 1,
         supplier: formData.supplier,
         month: formData.month || selectedMonth,
@@ -131,23 +140,25 @@ export default function InventoryPage() {
     const monthName = monthNames[month];
     const title = `مصاريف ${monthName} ${year}`;
 
-    // Calculate total
-    const totalAmount = monthItems.reduce((sum, item) => sum + item.price, 0);
+    // Calculate totals
+    const totalWholesale = monthItems.reduce((sum, item) => sum + (item.wholesalePrice || 0), 0);
+    const totalRetail = monthItems.reduce((sum, item) => sum + (item.retailPrice || 0), 0);
 
     // Build data with title, headers, data rows, and total row
     const data = [
       [title], // Title row
       [], // Empty row
-      ["الاسم", "الفئة", "السعر الإجمالي", "الكمية", "المورد"], // Headers
+      ["الاسم", "الفئة", "سعر الجملة", "سعر البيع", "الكمية", "المورد"], // Headers
       ...monthItems.map((part) => [
         part.name,
         part.category,
-        part.price,
+        part.wholesalePrice || 0,
+        part.retailPrice || 0,
         part.quantity,
         part.supplier,
       ]),
       [], // Empty row before total
-      ["الإجمالي", "", totalAmount, "", ""], // Total row
+      ["الإجمالي", "", totalWholesale, totalRetail, "", ""], // Total row
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(data);
@@ -167,8 +178,8 @@ export default function InventoryPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">المخزون</h1>
-          <p className="text-gray-500 dark:text-gray-400 mt-1">إدارة قطع الغيار والمستلزمات</p>
+          <h1 className="text-3xl font-bold text-gray-900">المخزون</h1>
+          <p className="text-gray-500 mt-1">إدارة قطع الغيار والمستلزمات</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={exportToExcel}>
@@ -183,18 +194,34 @@ export default function InventoryPage() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">إجمالي مصاريف المخزون - {selectedMonth}</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-500">إجمالي الشراء - {selectedMonth}</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(totalValue)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(totalWholesaleValue)}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">عدد المصاريف</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-500">إجمالي البيع - {selectedMonth}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(totalRetailValue)}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">صافي الربح - {selectedMonth}</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{formatCurrency(totalProfit)}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-500">عدد الأصناف</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalItems}</div>
@@ -213,52 +240,79 @@ export default function InventoryPage() {
             className="pr-10"
           />
         </div>
-        <Input
-          type="month"
-          value={selectedMonth}
-          onChange={(e) => setSelectedMonth(e.target.value)}
-          className="w-40"
-        />
-        <select
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
-          className="h-10 rounded-lg border border-gray-300 bg-white px-3 text-sm dark:border-gray-700 dark:bg-gray-900"
-        >
-          <option value="all">جميع الفئات</option>
-          {categories.map((cat) => (
-            <option key={cat} value={cat}>{cat}</option>
-          ))}
-        </select>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className="w-40 justify-start text-right font-normal">
+              <CalendarIcon className="ml-2 h-4 w-4" />
+              {selectedMonth}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={new Date(selectedMonth + "-01")}
+              onSelect={(date) => date && setSelectedMonth(date.toISOString().slice(0, 7))}
+              captionLayout="dropdown"
+              fromYear={2020}
+              toYear={2030}
+              monthsMode={true}
+              className="rounded-md border p-4"
+              classNames={{
+                day: "h-10 w-10 text-base",
+                head_cell: "w-10 text-base",
+                caption_label: "text-base font-semibold",
+                nav_button: "h-10 w-10",
+                dropdowns: "flex gap-2 p-4",
+                dropdown_root: "w-32",
+              }}
+            />
+          </PopoverContent>
+        </Popover>
+        <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+          <SelectTrigger className="w-40">
+            <SelectValue placeholder="جميع الفئات" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">جميع الفئات</SelectItem>
+            {categories.map((cat) => (
+              <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      {/* Inventory Table */}
+      {/* Purchases Table */}
       <Card>
         <CardContent className="p-0">
-          <Table>
+          <Table className="border-black">
             <TableHeader>
               <TableRow>
-                <TableHead>الصنف</TableHead>
-                <TableHead>الفئة</TableHead>
-                <TableHead>السعر</TableHead>
-                <TableHead>الكمية</TableHead>
-                <TableHead>المورد</TableHead>
-                <TableHead>الإجراءات</TableHead>
+                <TableHead className="text-right">الصنف</TableHead>
+                <TableHead className="text-right">المورد</TableHead>
+                <TableHead className="text-right">الكمية</TableHead>
+                <TableHead className="text-right">سعر الشراء</TableHead>
+                <TableHead className="text-right">سعر البيع</TableHead>
+                <TableHead className="text-right">الربح</TableHead>
+                <TableHead className="text-right">التاريخ</TableHead>
+                <TableHead className="text-right">الإجراءات</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredParts.map((part) => (
                 <TableRow key={part.id}>
                   <TableCell className="font-medium">{part.name}</TableCell>
-                  <TableCell>{part.category}</TableCell>
-                  <TableCell>{formatCurrency(part.price)}</TableCell>
-                  <TableCell>{part.quantity}</TableCell>
                   <TableCell>{part.supplier}</TableCell>
+                  <TableCell>{part.quantity}</TableCell>
+                  <TableCell>{formatCurrency(part.wholesalePrice || 0)}</TableCell>
+                  <TableCell className="text-blue-600 font-semibold">{formatCurrency(part.retailPrice || 0)}</TableCell>
+                  <TableCell className="text-green-600 font-semibold">{formatCurrency((part.retailPrice || 0) - (part.wholesalePrice || 0))}</TableCell>
+                  <TableCell>{part.month}</TableCell>
                   <TableCell>
                     <div className="flex gap-2">
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(part)}>
                         <Edit2 className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(part.id)} className="text-red-500">
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(part.id)} className="text-red-500"> 
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -305,14 +359,25 @@ export default function InventoryPage() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>السعر الإجمالي</Label>
+                <Label>سعر الجملة (من المورد)</Label>
                 <Input
                   type="number"
-                  value={formData.totalPrice}
-                  onChange={(e) => setFormData({ ...formData, totalPrice: e.target.value })}
-                  placeholder="إجمالي سعر الشراء"
+                  value={formData.wholesalePrice}
+                  onChange={(e) => setFormData({ ...formData, wholesalePrice: e.target.value })}
+                  placeholder="سعر الشراء من المورد"
                 />
               </div>
+              <div className="space-y-2">
+                <Label>سعر البيع (للعميل)</Label>
+                <Input
+                  type="number"
+                  value={formData.retailPrice}
+                  onChange={(e) => setFormData({ ...formData, retailPrice: e.target.value })}
+                  placeholder="سعر البيع للعميل"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>الكمية</Label>
                 <Input
@@ -321,14 +386,46 @@ export default function InventoryPage() {
                   onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
                 />
               </div>
+              <div className="space-y-2">
+                <Label>الربح المتوقع</Label>
+                <div className="h-10 flex items-center px-3 rounded-md border border-gray-200 bg-gray-50 text-green-600 font-medium">
+                  {formData.retailPrice && formData.wholesalePrice 
+                    ? formatCurrency(Number(formData.retailPrice) - Number(formData.wholesalePrice))
+                    : "-"
+                  }
+                </div>
+              </div>
             </div>
             <div className="space-y-2">
               <Label>الشهر</Label>
-              <Input
-                type="month"
-                value={formData.month}
-                onChange={(e) => setFormData({ ...formData, month: e.target.value })}
-              />
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className="w-full justify-start text-right font-normal">
+                    <CalendarIcon className="ml-2 h-4 w-4" />
+                    {formData.month}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={new Date(formData.month + "-01")}
+                    onSelect={(date) => date && setFormData({ ...formData, month: date.toISOString().slice(0, 7) })}
+                    captionLayout="dropdown"
+                    fromYear={2020}
+                    toYear={2030}
+                    monthsMode={true}
+                    className="rounded-md border p-4"
+                    classNames={{
+                      day: "h-10 w-10 text-base",
+                      head_cell: "w-10 text-base",
+                      caption_label: "text-base font-semibold",
+                      nav_button: "h-10 w-10",
+                      dropdowns: "flex gap-2 p-4",
+                      dropdown_root: "w-32",
+                    }}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
           </div>
           <DialogFooter>
