@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CalendarIcon } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { getEmployeeSalaries, salaryAdjustments } from "@/lib/mockData";
+import { getEmployees, getEmployeeSalaries } from "@/lib/database";
 import { formatCurrency } from "@/lib/utils";
 import { Plus, Search, Edit2, Trash2, Download, Gift, MinusCircle } from "lucide-react";
 import * as XLSX from "xlsx";
@@ -40,9 +40,24 @@ export default function EmployeesPage() {
   const [selectedMonth, setSelectedMonth] = useState("2024-01");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState(null);
-  const [employeesList, setEmployeesList] = useState(initialEmployees);
-  // Local adjustments storage
+  const [employeesList, setEmployeesList] = useState([]);
   const [localAdjustments, setLocalAdjustments] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const { data: employeesData } = await getEmployees();
+        setEmployeesList(employeesData || []);
+      } catch (error) {
+        console.error('Error fetching employees:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
   const [formData, setFormData] = useState({
     name: "",
     role: "",

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { transactions, clients, jobs } from "@/lib/mockData";
+import { getTransactions, getClients, getJobs } from "@/lib/database";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Plus, Search, Download, ArrowDownLeft, ArrowUpRight, Edit2, Trash2 } from "lucide-react";
 import * as XLSX from "xlsx";
@@ -27,7 +27,32 @@ export default function PaymentsPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState(null);
-  const [transactionsList, setTransactionsList] = useState(transactions);
+  const [transactionsList, setTransactionsList] = useState([]);
+  const [clientsList, setClientsList] = useState([]);
+  const [jobsList, setJobsList] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [transactionsResult, clientsResult, jobsResult] = await Promise.all([
+          getTransactions(),
+          getClients(),
+          getJobs()
+        ]);
+        
+        setTransactionsList(transactionsResult.data || []);
+        setClientsList(clientsResult.data || []);
+        setJobsList(jobsResult.data || []);
+      } catch (error) {
+        console.error('Error fetching payments data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
   const [formData, setFormData] = useState({
     type: "income",
     clientId: "none",
@@ -330,7 +355,7 @@ export default function PaymentsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">اختر العميل</SelectItem>
-                    {clients.map((c) => (
+                    {clientsList.map((c) => (
                       <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -400,7 +425,7 @@ export default function PaymentsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">اختر العميل</SelectItem>
-                    {clients.map((c) => (
+                    {clientsList.map((c) => (
                       <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
                     ))}
                   </SelectContent>

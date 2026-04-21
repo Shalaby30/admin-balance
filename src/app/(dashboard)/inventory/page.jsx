@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { getSpareParts } from "@/lib/database";
 import { formatCurrency } from "@/lib/utils";
 import { Plus, Search, Edit2, Trash2, Download, CalendarIcon } from "lucide-react";
 import * as XLSX from "xlsx";
@@ -37,11 +38,29 @@ const initialInventory = [
 
 export default function InventoryPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("all");
   const [selectedMonth, setSelectedMonth] = useState("2024-01");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
-  const [inventoryList, setInventoryList] = useState(initialInventory);
+  const [inventoryList, setInventoryList] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const { data: sparePartsData } = await getSpareParts();
+        setInventoryList(sparePartsData || []);
+      } catch (error) {
+        console.error('Error fetching inventory:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
+
   const [formData, setFormData] = useState({
     name: "",
     category: "",

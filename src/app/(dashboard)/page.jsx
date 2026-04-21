@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -14,10 +14,10 @@ import {
 import {
   getFinancialSummary,
   getMonthlyData,
-  jobs,
-  transactions,
+  getJobs,
+  getTransactions,
   getLowStockItems,
-} from "@/lib/mockData";
+} from "@/lib/database";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import {
   TrendingUp,
@@ -51,19 +51,78 @@ const chartConfig = {
 };
 
 export default function DashboardPage() {
-  const summary = getFinancialSummary();
-  const monthlyData = getMonthlyData();
-  const lowStock = getLowStockItems();
+  const [summary, setSummary] = useState(null);
+  const [monthlyData, setMonthlyData] = useState([]);
+  const [lowStock, setLowStock] = useState([]);
+  const [recentJobs, setRecentJobs] = useState([]);
+  const [recentTransactions, setRecentTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const recentJobs = jobs.slice(-5).reverse();
-  const recentTransactions = transactions.slice(-5).reverse();
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        // Fetch all data in parallel
+        const [
+          summaryResult,
+          monthlyResult,
+          lowStockResult,
+          jobsResult,
+          transactionsResult
+        ] = await Promise.all([
+          getFinancialSummary(),
+          getMonthlyData(),
+          getLowStockItems(),
+          getJobs(),
+          getTransactions()
+        ]);
 
-  const jobTypeData = [
-    { name: "تركيب", value: jobs.filter((j) => j.type === "installation").length, key: "installation" },
-    { name: "صيانة", value: jobs.filter((j) => j.type === "maintenance").length, key: "maintenance" },
-    { name: "إصلاح", value: jobs.filter((j) => j.type === "repair").length, key: "repair" },
-    { name: "تحديث", value: jobs.filter((j) => j.type === "modernization").length, key: "modernization" },
+        setSummary(summaryResult.data);
+        setMonthlyData(monthlyResult);
+        setLowStock(lowStockResult.data || []);
+        setRecentJobs(jobsResult.data?.slice(0, 5).reverse() || []);
+        setRecentTransactions(transactionsResult.data?.slice(0, 5).reverse() || []);
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
+
+  const jobTypeData = recentJobs.length > 0 ? [
+    { name: "installation", value: recentJobs.filter((j) => j.type === "installation").length, key: "installation" },
+    { name: "maintenance", value: recentJobs.filter((j) => j.type === "maintenance").length, key: "maintenance" },
+    { name: "repair", value: recentJobs.filter((j) => j.type === "repair").length, key: "repair" },
+    { name: "modernization", value: recentJobs.filter((j) => j.type === "modernization").length, key: "modernization" },
+  ] : [
+    { name: "installation", value: 0, key: "installation" },
+    { name: "maintenance", value: 0, key: "maintenance" },
+    { name: "repair", value: 0, key: "repair" },
+    { name: "modernization", value: 0, key: "modernization" },
   ];
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="text-gray-500 mt-2">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback values if data is not available
+  const safeSummary = summary || {
+    totalRevenue: 0,
+    totalExpenses: 0,
+    netProfit: 0,
+    unpaidRevenue: 0,
+    totalSalaries: 0,
+    inventoryValue: 0
+  };
 
   return (
     <div className="space-y-6">
@@ -83,7 +142,7 @@ export default function DashboardPage() {
             <TrendingUp className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(summary.totalRevenue)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(safeSummary.totalRevenue)}</div>
             <p className="text-xs text-gray-500 mt-1">
               <span className="text-green-500 inline-flex items-center">
                 <ArrowUpRight className="h-3 w-3 mr-1" />
@@ -102,7 +161,7 @@ export default function DashboardPage() {
             <TrendingDown className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(summary.totalExpenses)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(safeSummary.totalExpenses)}</div>
             <p className="text-xs text-gray-500 mt-1">
               <span className="text-red-500 inline-flex items-center">
                 <ArrowDownRight className="h-3 w-3 mr-1" />
@@ -121,10 +180,10 @@ export default function DashboardPage() {
             <TrendingUp className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(summary.netProfit)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(safeSummary.netProfit)}</div>
             <p className="text-xs text-gray-500 mt-1">
               هامش الربح: {" "}
-              {((summary.netProfit / summary.totalRevenue) * 100).toFixed(1)}%
+              {safeSummary.totalRevenue > 0 ? ((safeSummary.netProfit / safeSummary.totalRevenue) * 100).toFixed(1) : 0}%
             </p>
           </CardContent>
         </Card>
@@ -137,8 +196,8 @@ export default function DashboardPage() {
             <AlertCircle className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(summary.unpaidRevenue)}</div>
-            <p className="text-xs text-gray-500 mt-1">من {jobs.filter((j) => j.paymentStatus !== "paid").length} عملية</p>
+            <div className="text-2xl font-bold">{formatCurrency(safeSummary.unpaidRevenue)}</div>
+            <p className="text-xs text-gray-500 mt-1">من {recentJobs.filter((j) => j.paymentStatus !== "paid").length} عملية</p>
           </CardContent>
         </Card>
       </div>
@@ -182,7 +241,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">6</div>
-            <p className="text-xs text-gray-500">إجمالي الرواتب: {formatCurrency(summary.totalSalaries)}</p>
+            <p className="text-xs text-gray-500">إجمالي الرواتب: {formatCurrency(safeSummary.totalSalaries)}</p>
           </CardContent>
         </Card>
 
@@ -192,7 +251,7 @@ export default function DashboardPage() {
             <Package className="h-4 w-4 text-gray-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(summary.inventoryValue)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(safeSummary.inventoryValue)}</div>
             {lowStock.length > 0 && (
               <p className="text-xs text-red-500 mt-1">
                 <AlertCircle className="h-3 w-3 inline mr-1" />

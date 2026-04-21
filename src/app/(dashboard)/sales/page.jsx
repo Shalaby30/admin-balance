@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,7 +21,7 @@ import * as XLSX from "xlsx";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { clients, spareParts } from "@/lib/mockData";
+import { getClients, getSpareParts } from "@/lib/database";
 
 // Initial sales data
 const initialSales = [
@@ -35,8 +35,33 @@ export default function SalesPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingSale, setEditingSale] = useState(null);
-  const [salesList, setSalesList] = useState(initialSales);
-  const [inventoryList, setInventoryList] = useState(spareParts);
+  const [salesList, setSalesList] = useState([]);
+  const [inventoryList, setInventoryList] = useState([]);
+  const [clientsList, setClientsList] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [sparePartsResult, clientsResult] = await Promise.all([
+          getSpareParts(),
+          getClients()
+        ]);
+        
+        setInventoryList(sparePartsResult.data || []);
+        setClientsList(clientsResult.data || []);
+        // TODO: Add getSales function to database.js
+        // const { data: salesData } = await getSales();
+        // setSalesList(salesData || []);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
   
   const [formData, setFormData] = useState({
     clientId: "",
@@ -57,12 +82,12 @@ export default function SalesPage() {
   const totalSales = filteredSales.reduce((sum, s) => sum + s.total, 0);
 
   function getClientName(clientId) {
-    const client = clients.find((c) => c.id === clientId);
-    return client ? client.name : "غير معروف";
+    const client = clientsList.find((c) => c.id === clientId);
+    return client ? client.name : "Unknown";
   }
 
   function getClientPhone(clientId) {
-    const client = client.find((c) => c.id === clientId);
+    const client = clientsList.find((c) => c.id === clientId);
     return client ? client.phone : "";
   }
 
@@ -358,7 +383,7 @@ export default function SalesPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">اختر العميل</SelectItem>
-                    {clients.map((c) => (
+                    {clientsList.map((c) => (
                       <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -459,7 +484,7 @@ export default function SalesPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">اختر العميل</SelectItem>
-                    {clients.map((c) => (
+                    {clientsList.map((c) => (
                       <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>
                     ))}
                   </SelectContent>

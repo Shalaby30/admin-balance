@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-// mockData no longer used - using local state instead
+import { getJobs, getClients } from "@/lib/database";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Plus, Search, Edit2, Trash2, Download, Filter } from "lucide-react";
 import * as XLSX from "xlsx";
@@ -44,23 +44,38 @@ const paymentTypes = {
 // Initial jobs data
 const initialJobs = [
   { id: 1, type: "installation", clientId: 1, buildingId: 1, description: "تركيب 3 مصاعد للعميل", cost: 85000, date: "2024-01-15", paymentMethod: "cash", paymentStatus: "paid", status: "completed", assignedEmployees: [1, 2] },
-  { id: 2, type: "maintenance", clientId: 2, buildingId: 2, description: "صيانة دورية للمصاعد", cost: 5000, date: "2024-01-20", paymentMethod: "installment", paymentStatus: "installment", status: "in_progress", assignedEmployees: [2] },
-  { id: 3, type: "repair", clientId: 3, buildingId: 3, description: "إصلاح عطل مفاجئ", cost: 12000, date: "2024-01-25", paymentMethod: "cash", paymentStatus: "unpaid", status: "in_progress", assignedEmployees: [3] },
 ];
 
 export default function JobsPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [statusFilter, setStatusFilter] = useState("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [editingJob, setEditingJob] = useState(null);
-  const [jobsList, setJobsList] = useState(initialJobs);
-  const [clientsList] = useState([
-    { id: 1, name: "شركة النيل للتجارة" },
-    { id: 2, name: "فندق الأهرام" },
-    { id: 3, name: "مستشفى الشفاء" },
-    { id: 4, name: "مجمع السلام" },
-  ]);
+  const [jobsList, setJobsList] = useState([]);
+  const [clientsList, setClientsList] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [jobsResult, clientsResult] = await Promise.all([
+          getJobs(),
+          getClients()
+        ]);
+        
+        setJobsList(jobsResult.data || []);
+        setClientsList(clientsResult.data || []);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, []);
+
   const [formData, setFormData] = useState({
     type: "installation",
     clientId: "none",

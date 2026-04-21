@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Supabase</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <h1>Supabase Connection Test</h1>
+    <div id="result"></div>
+    
+    <script>
+        // Replace with your actual values
+        const supabaseUrl = 'https://fejlftjrsuzvdmxkkfiz.supabase.co';
+        const supabaseKey = 'sb_publishable_Wi5eyMLDkZu6-dvuKpRcaQ_xjqFTkV9';
+        
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+        
+        async function testConnection() {
+            try {
+                // Test 1: Check if we can query users
+                const { data: users, error: usersError } = await supabase
+                    .from('users')
+                    .select('*');
+                
+                if (usersError) {
+                    document.getElementById('result').innerHTML += '<p style="color:red">Users Error: ' + usersError.message + '</p>';
+                } else {
+                    document.getElementById('result').innerHTML += '<p style="color:green">Users: ' + users.length + ' found</p>';
+                }
+                
+                // Test 2: Check if we can query clients
+                const { data: clients, error: clientsError } = await supabase
+                    .from('clients')
+                    .select('*');
+                
+                if (clientsError) {
+                    document.getElementById('result').innerHTML += '<p style="color:red">Clients Error: ' + clientsError.message + '</p>';
+                } else {
+                    document.getElementById('result').innerHTML += '<p style="color:green">Clients: ' + clients.length + ' found</p>';
+                }
+                
+                // Test 3: Try to insert a test client
+                const testClient = {
+                    name: 'Test Client ' + new Date().toISOString(),
+                    phone: '0123456789',
+                    email: 'test@test.com',
+                    address: 'Test Address'
+                };
+                
+                const { data: newClient, error: insertError } = await supabase
+                    .from('clients')
+                    .insert(testClient)
+                    .select();
+                
+                if (insertError) {
+                    document.getElementById('result').innerHTML += '<p style="color:red">Insert Error: ' + insertError.message + '</p>';
+                } else {
+                    document.getElementById('result').innerHTML += '<p style="color:green">Insert Success: ' + JSON.stringify(newClient) + '</p>';
+                }
+                
+            } catch (err) {
+                document.getElementById('result').innerHTML += '<p style="color:red">Exception: ' + err.message + '</p>';
+            }
+        }
+        
+        testConnection();
+    </script>
+</body>
+</html>
