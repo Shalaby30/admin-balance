@@ -409,4 +409,40 @@ export async function deleteSale(id) {
     .eq('id', id);
   return { data, error };
 }
+// ========================================
+// JOBS (الأعمال)
+// ========================================
+
+export async function getJobs() {
+  const { data, error } = await supabase
+    .from('jobs')
+    .select('*')
+    .order('date', { ascending: false });
+  return { data, error };
+}
+
+export async function createJob(jobData) {
+  const { data, error } = await supabase
+    .from('jobs')
+    .insert([jobData])
+    .select();
+  return { data, error };
+}
+
+export async function updateJob(id, updates) {
+  const { data, error } = await supabase
+    .from('jobs')
+    .update(updates)
+    .eq('id', id)
+    .select();
+  return { data, error };
+}
+
+export async function deleteJob(id) {
+  const { data, error } = await supabase
+    .from('jobs')
+    .delete()
+    .eq('id', id);
+  return { data, error };
+}
 
