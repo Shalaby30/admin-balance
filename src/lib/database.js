@@ -8,23 +8,13 @@ export async function getUsers() {
   return { data, error }
 }
 
-export async function getUserById(id) {
-  const { data, error } = await supabase.from('users').select('*').eq('id', id).single()
-  return { data, error }
-}
-
-export async function getUserByUsername(username) {
-  const { data, error } = await supabase.from('users').select('*').eq('username', username).single()
-  return { data, error }
-}
-
 export async function createUser(user) {
   const { data, error } = await supabase.from('users').insert(user).select()
   return { data, error }
 }
 
 // ========================================
-// EMPLOYEES
+// EMPLOYEES & ADJUSTMENTS
 // ========================================
 export async function getEmployees() {
   const { data, error } = await supabase.from('employees').select('*').eq('is_active', true).order('name')
@@ -46,6 +36,12 @@ export async function deleteEmployee(id) {
   return { data, error }
 }
 
+// الدالة اللي كانت ناقصة ومسببة خطأ صفحة الموظفين
+export async function createEmployeeAdjustment(adjustment) {
+  const { data, error } = await supabase.from('employee_adjustments').insert(adjustment).select()
+  return { data, error }
+}
+
 // ========================================
 // CLIENTS
 // ========================================
@@ -54,31 +50,8 @@ export async function getClients() {
   return { data, error }
 }
 
-export async function createClient(client) {
-  const { data, error } = await supabase.from('clients').insert(client).select()
-  return { data, error }
-}
-
-export async function updateClient(id, updates) {
-  const { data, error } = await supabase.from('clients').update(updates).eq('id', id).select()
-  return { data, error }
-}
-
 // ========================================
-// BUILDINGS & ELEVATORS
-// ========================================
-export async function getBuildings() {
-  const { data, error } = await supabase.from('buildings').select(`*, clients(name, phone)`).order('name')
-  return { data, error }
-}
-
-export async function getElevators() {
-  const { data, error } = await supabase.from('elevators').select(`*, buildings(name, address, clients(name))`).order('buildings(name), model')
-  return { data, error }
-}
-
-// ========================================
-// JOBS (تم توحيدها وحذف التكرار)
+// JOBS
 // ========================================
 export async function getJobs() {
   const { data, error } = await supabase.from('jobs').select('*').order('date', { ascending: false });
@@ -101,10 +74,16 @@ export async function deleteJob(id) {
 }
 
 // ========================================
-// SPARE PARTS & SALES
+// SPARE PARTS & INVENTORY
 // ========================================
 export async function getSpareParts() {
   const { data, error } = await supabase.from('spare_parts').select(`*, spare_parts_categories(name)`).eq('is_active', true).order('name')
+  return { data, error }
+}
+
+// الدالة اللي كانت ناقصة ومسببة خطأ صفحة المخزن
+export async function createSparePart(part) {
+  const { data, error } = await supabase.from('spare_parts').insert(part).select()
   return { data, error }
 }
 
@@ -113,6 +92,15 @@ export async function updateSparePart(id, updates) {
   return { data, error }
 }
 
+// الدالة اللي كانت ناقصة ومسببة خطأ الداشبورد
+export async function getLowStockItems() {
+  const { data, error } = await supabase.from('spare_parts').select('*').filter('quantity', 'lte', 'min_stock')
+  return { data, error }
+}
+
+// ========================================
+// SALES
+// ========================================
 export async function getSales() {
   const { data, error } = await supabase.from('sales').select('*').order('date', { ascending: false });
   return { data, error };
@@ -123,25 +111,39 @@ export async function createSale(saleData) {
   return { data, error };
 }
 
+// الدالة اللي كانت ناقصة ومسببة خطأ صفحة المبيعات
+export async function updateSale(id, updates) {
+  const { data, error } = await supabase.from('sales').update(updates).eq('id', id).select();
+  return { data, error };
+}
+
 export async function deleteSale(id) {
   const { data, error } = await supabase.from('sales').delete().eq('id', id);
   return { data, error };
 }
 
 // ========================================
-// FINANCIALS & MAINTENANCE
+// FINANCIALS & CHARTS
 // ========================================
 export async function getFinancialSummary() {
   const { data, error } = await supabase.from('financial_summary_view').select('*').single()
   return { data: data || { total_revenue: 0, total_expenses: 0 }, error }
 }
 
-export async function getMaintenanceRecords() {
-  const { data, error } = await supabase.from('maintenance_records').select(`*, elevators(model, buildings(name))`).order('date', { ascending: false })
-  return { data, error }
+// الدالة اللي كانت ناقصة ومسببة خطأ الداشبورد
+export async function getMonthlyData() {
+  const { data, error } = await supabase.from('transactions').select('*').order('date', { ascending: true })
+  if (error) return []
+  // تبسيط للبيانات المطلوبة للرسم البياني
+  return data.slice(-6) 
 }
 
 export async function getTransactions() {
   const { data, error } = await supabase.from('transactions').select('*').order('date', { ascending: false })
+  return { data, error }
+}
+
+export async function getMaintenanceRecords() {
+  const { data, error } = await supabase.from('maintenance_records').select(`*, elevators(model)`).order('date', { ascending: false })
   return { data, error }
 }
