@@ -182,3 +182,15 @@ export async function getTransactions() {
   const { data, error } = await supabase.from('transactions').select('*').order('date', { ascending: false });
   return { data, error };
 }
+// معاملات مالية (Transactions)
+export async function createTransaction(transaction) {
+  return await supabase.from('transactions').insert([transaction]);
+}
+
+export async function updateTransaction(id, updates) {
+  return await supabase.from('transactions').update(updates).eq('id', id);
+}
+
+export async function deleteTransaction(id) {
+  return await supabase.from('transactions').delete().eq('id', id);
+}
