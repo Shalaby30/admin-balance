@@ -20,8 +20,15 @@ import * as XLSX from "xlsx";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-// استيراد الدوال اللازمة من الداتابيز
-import { getClients, getSpareParts, updateSparePart, supabase } from "@/lib/database";
+import { 
+  getClients, 
+  getSpareParts, 
+  updateSparePart, 
+  getSales, 
+  createSale, 
+  updateSale, 
+  deleteSale 
+} from "@/lib/database";
 
 export default function SalesPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -41,31 +48,20 @@ export default function SalesPage() {
     quantity: "",
     price: "",
     date: new Date().toISOString().split("T")[0],
-    month: new Date().toISOString().slice(0, 7),
   });
 
-  // 1. جلب البيانات من الداتابيز (المخزن، العملاء، والمبيعات)
+  // جلب البيانات من الداتابيز
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      // جلب المخزن والعملاء
-      const [sparePartsResult, clientsResult] = await Promise.all([
+      const [sparePartsRes, clientsRes, salesRes] = await Promise.all([
         getSpareParts(),
-        getClients()
+        getClients(),
+        getSales()
       ]);
-      
-      setInventoryList(sparePartsResult.data || []);
-      setClientsList(clientsResult.data || []);
-
-      // جلب المبيعات (بفرض وجود جدول اسمه sales)
-      const { data: salesData, error: salesError } = await supabase
-        .from('sales')
-        .select('*')
-        .order('date', { ascending: false });
-
-      if (!salesError) {
-        setSalesList(salesData || []);
-      }
+      setInventoryList(sparePartsRes.data || []);
+      setClientsList(clientsRes.data || []);
+      setSalesList(salesRes.data || []);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -77,7 +73,7 @@ export default function SalesPage() {
     fetchData();
   }, [fetchData]);
 
-  // 2. منطق الفلترة (بحث بالعميل أو الصنف + فلتر الشهر)
+  // منطق البحث والفلترة
   const filteredSales = salesList.filter((sale) => {
     const clientName = clientsList.find(c => c.id === sale.client_id)?.name || "";
     const matchesSearch = (sale.item_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -88,222 +84,191 @@ export default function SalesPage() {
 
   const totalSales = filteredSales.reduce((sum, s) => sum + (s.total || 0), 0);
 
-  // 3. منطق حفظ عملية بيع جديدة (Logic Fix: تحديث المخزن + تسجيل البيع)
+  // --- حفظ عملية بيع جديدة ---
   const handleSaveAdd = async () => {
-    if (!formData.clientId || !formData.itemId || !formData.quantity || !formData.price) return;
-    
-    const item = inventoryList.find((i) => i.id === parseInt(formData.itemId));
-    if (!item) return;
+    const item = inventoryList.find(i => i.id === parseInt(formData.itemId));
+    if (!item || !formData.clientId || !formData.quantity) return;
 
-    const sellQuantity = parseInt(formData.quantity);
-    if (sellQuantity > item.quantity) {
-      alert(`الكمية غير متوفرة! المخزن يحتوي على ${item.quantity} قطعة فقط`);
-      return;
-    }
+    const sellQty = parseInt(formData.quantity);
+    if (sellQty > item.quantity) return alert("الكمية غير كافية في المخزن!");
 
     setIsSaving(true);
     try {
-      const totalAmount = sellQuantity * parseFloat(formData.price);
-
-      // أ- إضافة عملية البيع للداتابيز
-      const { error: saleError } = await supabase.from('sales').insert([{
+      const totalAmount = sellQty * parseFloat(formData.price);
+      
+      // 1. تسجيل البيع
+      await createSale({
         client_id: parseInt(formData.clientId),
         item_id: item.id,
         item_name: item.name,
-        quantity: sellQuantity,
+        quantity: sellQty,
         price: parseFloat(formData.price),
         total: totalAmount,
         date: formData.date
-      }]);
-
-      if (saleError) throw saleError;
-
-      // ب- تحديث الكمية في المخزن (نقص الكمية)
-      const { error: invError } = await updateSparePart(item.id, {
-        quantity: item.quantity - sellQuantity
       });
 
-      if (invError) throw invError;
+      // 2. تحديث المخزن (خصم الكمية)
+      await updateSparePart(item.id, { quantity: item.quantity - sellQty });
 
-      await fetchData(); // تحديث الشاشة
+      await fetchData();
       setIsAddDialogOpen(false);
-    } catch (error) {
-      alert("خطأ أثناء الحفظ: " + error.message);
-    } finally {
-      setIsSaving(false);
-    }
+    } catch (e) { alert(e.message); }
+    setIsSaving(false);
   };
 
-  // 4. منطق حذف عملية بيع (Logic Fix: استرجاع الكمية للمخزن)
-  const handleDelete = async (id) => {
-    const sale = salesList.find((s) => s.id === id);
-    if (!sale) return;
+  // --- حفظ التعديلات ---
+  const handleSaveEdit = async () => {
+    if (!editingSale) return;
+    setIsSaving(true);
+    try {
+      const newQty = parseInt(formData.quantity);
+      const diff = newQty - editingSale.quantity;
+      const item = inventoryList.find(i => i.id === editingSale.item_id);
 
-    if (confirm("هل أنت متأكد من حذف عملية البيع؟ سيتم إرجاع الكمية للمخزن")) {
-      try {
-        // أ- إرجاع الكمية للمخزن أولاً
-        const item = inventoryList.find(i => i.id === sale.item_id);
-        if (item) {
-          await updateSparePart(item.id, {
-            quantity: item.quantity + sale.quantity
-          });
-        }
+      if (item && item.quantity < diff) throw new Error("المخزن لا يكفي للتعديل المطلوب");
 
-        // ب- حذف عملية البيع
-        await supabase.from('sales').delete().eq('id', id);
-        
-        await fetchData();
-      } catch (error) {
-        alert("خطأ أثناء الحذف: " + error.message);
+      // 1. تحديث العملية
+      await updateSale(editingSale.id, {
+        client_id: parseInt(formData.clientId),
+        quantity: newQty,
+        price: parseFloat(formData.price),
+        total: newQty * parseFloat(formData.price),
+        date: formData.date
+      });
+
+      // 2. تحديث المخزن بالفرق
+      if (item) {
+        await updateSparePart(item.id, { quantity: item.quantity - diff });
       }
-    }
+
+      await fetchData();
+      setIsEditDialogOpen(false);
+    } catch (e) { alert(e.message); }
+    setIsSaving(false);
   };
 
-  // دوال مساعدة للـ UI
-  const getClientName = (clientId) => clientsList.find(c => c.id === clientId)?.name || "---";
-
-  const exportToExcel = () => {
-    const data = filteredSales.map(s => ({
-      "التاريخ": s.date,
-      "العميل": getClientName(s.client_id),
-      "الصنف": s.item_name,
-      "الكمية": s.quantity,
-      "السعر": s.price,
-      "الإجمالي": s.total
-    }));
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Sales");
-    XLSX.writeFile(wb, `Sales_${selectedMonth}.xlsx`);
+  // --- الحذف وإرجاع الكمية للمخزن ---
+  const handleDelete = async (sale) => {
+    if (!confirm("سيتم حذف العملية وإرجاع الكمية للمخزن. هل أنت متأكد؟")) return;
+    try {
+      const item = inventoryList.find(i => i.id === sale.item_id);
+      if (item) {
+        await updateSparePart(item.id, { quantity: item.quantity + sale.quantity });
+      }
+      await deleteSale(sale.id);
+      await fetchData();
+    } catch (e) { alert(e.message); }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header - نفس الـ UI بتاعك */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-6" dir="rtl">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold ">عمليات البيع</h1>
-          <p className=" mt-1 text-gray-500">تسجيل مبيعات قطع الغيار للعملاء</p>
+          <h1 className="text-3xl font-bold">المبيعات</h1>
+          <p className="text-gray-500">إدارة مبيعات قطع الغيار</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={exportToExcel}>
-            <Download className="w-4 h-4 ml-2" /> تصدير Excel
-          </Button>
-          <Button onClick={() => {
-            setFormData({
-                clientId: "", itemId: "", quantity: "", price: "",
-                date: new Date().toISOString().split("T")[0],
-                month: selectedMonth
-            });
-            setIsAddDialogOpen(true);
-          }}>
-            <Plus className="w-4 h-4 ml-2 " /> عملية بيع جديدة
-          </Button>
-        </div>
+        <Button onClick={() => setIsAddDialogOpen(true)} className="bg-black text-white">
+          <Plus className="ml-2 h-4 w-4" /> عملية بيع جديدة
+        </Button>
       </div>
 
-      {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium ">إجمالي المبيعات</CardTitle>
-            <Package className="h-4 w-4 text-blue-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{formatCurrency(totalSales)}</div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card className="bg-blue-50">
+          <CardContent className="p-6 text-center">
+            <p className="text-sm text-blue-600 font-bold">إجمالي مبيعات الشهر</p>
+            <h2 className="text-3xl font-black text-blue-900">{formatCurrency(totalSales)}</h2>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium ">عدد العمليات</CardTitle>
-            <User className="h-4 w-4 text-green-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{filteredSales.length}</div>
+        <Card className="bg-green-50">
+          <CardContent className="p-6 text-center">
+            <p className="text-sm text-green-600 font-bold">عدد العمليات</p>
+            <h2 className="text-3xl font-black text-green-900">{filteredSales.length}</h2>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex gap-4">
         <div className="relative flex-1">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 " />
-          <Input
-            placeholder="بحث في المبيعات..."
+          <Search className="absolute right-3 top-3 h-4 w-4 text-gray-400" />
+          <Input 
+            placeholder="بحث باسم العميل أو الصنف..." 
+            className="pr-10" 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pr-10"
           />
         </div>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="w-40 justify-start text-right font-normal">
-              <CalendarIcon className="ml-2 h-4 w-4" />
-              {selectedMonth}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              mode="single"
-              selected={new Date(selectedMonth + "-01")}
-              onSelect={(date) => date && setSelectedMonth(date.toISOString().slice(0, 7))}
-            />
-          </PopoverContent>
-        </Popover>
+        <Input 
+          type="month" 
+          className="w-48" 
+          value={selectedMonth} 
+          onChange={(e) => setSelectedMonth(e.target.value)}
+        />
       </div>
 
-      {/* Table */}
       <Card>
-        <CardContent className="p-0">
-          <Table className="border-black">
-            <TableHeader>
-              <TableRow>
-                <TableHead className="text-right">العميل</TableHead>
-                <TableHead className="text-right">الصنف</TableHead>
-                <TableHead className="text-right">الكمية</TableHead>
-                <TableHead className="text-right">السعر</TableHead>
-                <TableHead className="text-right">التاريخ</TableHead>
-                <TableHead className="text-right">الإجراءات</TableHead>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-right">التاريخ</TableHead>
+              <TableHead className="text-right">العميل</TableHead>
+              <TableHead className="text-right">الصنف</TableHead>
+              <TableHead className="text-right">الكمية</TableHead>
+              <TableHead className="text-right">الإجمالي</TableHead>
+              <TableHead className="text-right">الإجراءات</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {loading ? (
+              <TableRow><TableCell colSpan={6} className="text-center py-10"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow>
+            ) : filteredSales.map((sale) => (
+              <TableRow key={sale.id}>
+                <TableCell>{sale.date}</TableCell>
+                <TableCell>{clientsList.find(c => c.id === sale.client_id)?.name || "---"}</TableCell>
+                <TableCell className="font-bold">{sale.item_name}</TableCell>
+                <TableCell>{sale.quantity}</TableCell>
+                <TableCell className="text-blue-700 font-bold">{formatCurrency(sale.total)}</TableCell>
+                <TableCell>
+                  <div className="flex gap-2">
+                    <Button variant="ghost" size="icon" onClick={() => {
+                      setEditingSale(sale);
+                      setFormData({
+                        clientId: String(sale.client_id),
+                        itemId: String(sale.item_id),
+                        quantity: String(sale.quantity),
+                        price: String(sale.price),
+                        date: sale.date
+                      });
+                      setIsEditDialogOpen(true);
+                    }}>
+                      <Edit2 className="h-4 w-4 text-blue-500" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(sale)}>
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-10 text-gray-400">جاري التحميل...</TableCell></TableRow>
-              ) : filteredSales.map((sale) => (
-                <TableRow key={sale.id}>
-                  <TableCell>{getClientName(sale.client_id)}</TableCell>
-                  <TableCell className="font-medium">{sale.item_name}</TableCell>
-                  <TableCell>{sale.quantity}</TableCell>
-                  <TableCell className="font-semibold">{formatCurrency(sale.price)}</TableCell>
-                  <TableCell>{sale.date}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(sale.id)}>
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
+            ))}
+          </TableBody>
+        </Table>
       </Card>
 
-      {/* Add Sale Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-lg text-black bg-white border border-gray-200">
-          <DialogHeader>
-            <DialogTitle className="text-black">عملية بيع جديدة</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4 text-right" dir="rtl">
+      {/* Dialog Add/Edit */}
+      <Dialog open={isAddDialogOpen || isEditDialogOpen} onOpenChange={(val) => {
+        setIsAddDialogOpen(val && !isEditDialogOpen);
+        setIsEditDialogOpen(val && isEditDialogOpen);
+        if(!val) setEditingSale(null);
+      }}>
+        <DialogContent className="bg-white text-right">
+          <DialogHeader><DialogTitle>{isEditDialogOpen ? "تعديل عملية بيع" : "بيع جديد"}</DialogTitle></DialogHeader>
+          <div className="space-y-4 pt-4">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>العميل</Label>
                 <Select value={formData.clientId} onValueChange={(v) => setFormData({...formData, clientId: v})}>
                   <SelectTrigger><SelectValue placeholder="اختر العميل" /></SelectTrigger>
                   <SelectContent>
-                    {clientsList.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
+                    {clientsList.map(c => <SelectItem key={c.id} value={String(c.id)}>{c.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -312,20 +277,24 @@ export default function SalesPage() {
                 <Input type="date" value={formData.date} onChange={(e) => setFormData({...formData, date: e.target.value})} />
               </div>
             </div>
+
             <div className="space-y-2">
               <Label>الصنف</Label>
-              <Select value={formData.itemId} onValueChange={(v) => {
-                const item = inventoryList.find(i => i.id === parseInt(v));
-                setFormData({...formData, itemId: v, price: item ? String(item.retail_price || 0) : ""});
-              }}>
-                <SelectTrigger><SelectValue placeholder="اختر الصنف" /></SelectTrigger>
+              <Select 
+                disabled={isEditDialogOpen} // نمنع تغيير الصنف في التعديل لضمان دقة المخزن
+                value={formData.itemId} 
+                onValueChange={(v) => {
+                  const item = inventoryList.find(i => i.id === parseInt(v));
+                  setFormData({...formData, itemId: v, price: item?.retail_price || item?.price || ""});
+                }}
+              >
+                <SelectTrigger><SelectValue placeholder="اختر من المخزن" /></SelectTrigger>
                 <SelectContent>
-                  {inventoryList.filter(i => i.quantity > 0).map((i) => (
-                    <SelectItem key={i.id} value={String(i.id)}>{i.name} (متوفر: {i.quantity})</SelectItem>
-                  ))}
+                  {inventoryList.map(i => <SelectItem key={i.id} value={String(i.id)}>{i.name} (متاح: {i.quantity})</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>الكمية</Label>
@@ -336,15 +305,18 @@ export default function SalesPage() {
                 <Input type="number" value={formData.price} onChange={(e) => setFormData({...formData, price: e.target.value})} />
               </div>
             </div>
-            {formData.quantity && formData.price && (
-              <div className="bg-blue-50 p-3 rounded-lg text-center">
-                <span className="font-bold text-blue-600 text-lg">إجمالي: {formatCurrency(Number(formData.quantity) * Number(formData.price))}</span>
-              </div>
-            )}
+
+            <div className="p-4 bg-blue-50 rounded-lg text-center font-bold text-blue-800">
+              الإجمالي: {formatCurrency(Number(formData.quantity || 0) * Number(formData.price || 0))}
+            </div>
           </div>
           <DialogFooter>
-            <Button onClick={handleSaveAdd} disabled={isSaving} className="w-full bg-black text-white">
-                {isSaving ? <Loader2 className="animate-spin" /> : "إتمام البيع"}
+            <Button 
+              className="w-full bg-black text-white" 
+              onClick={isEditDialogOpen ? handleSaveEdit : handleSaveAdd}
+              disabled={isSaving}
+            >
+              {isSaving ? <Loader2 className="animate-spin" /> : "حفظ العملية"}
             </Button>
           </DialogFooter>
         </DialogContent>
