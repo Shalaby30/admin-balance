@@ -377,7 +377,6 @@ export async function createEmployeeAdjustment(adjustment) {
 // SALES (عمليات البيع)
 // ========================================
 
-// جلب كل عمليات البيع مع ترتيبها من الأحدث للأقدم
 export async function getSales() {
   const { data, error } = await supabase
     .from('sales')
@@ -386,7 +385,6 @@ export async function getSales() {
   return { data, error };
 }
 
-// إضافة عملية بيع جديدة
 export async function createSale(saleData) {
   const { data, error } = await supabase
     .from('sales')
@@ -395,7 +393,6 @@ export async function createSale(saleData) {
   return { data, error };
 }
 
-// تحديث عملية بيع موجودة
 export async function updateSale(id, updates) {
   const { data, error } = await supabase
     .from('sales')
@@ -405,7 +402,6 @@ export async function updateSale(id, updates) {
   return { data, error };
 }
 
-// حذف عملية بيع
 export async function deleteSale(id) {
   const { data, error } = await supabase
     .from('sales')
@@ -413,3 +409,4 @@ export async function deleteSale(id) {
     .eq('id', id);
   return { data, error };
 }
+
