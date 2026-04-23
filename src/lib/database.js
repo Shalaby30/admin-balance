@@ -65,6 +65,14 @@ export async function updateEmployee(id, updates) {
   return { data, error }
 }
 
+export async function deleteEmployee(id) {
+  const { data, error } = await supabase
+    .from('employees')
+    .update({ is_active: false })
+    .eq('id', id)
+  return { data, error }
+}
+
 // ========================================
 // CLIENTS
 // ========================================
@@ -81,6 +89,15 @@ export async function createClient(client) {
   const { data, error } = await supabase
     .from('clients')
     .insert(client)
+    .select()
+  return { data, error }
+}
+
+export async function updateClient(id, updates) {
+  const { data, error } = await supabase
+    .from('clients')
+    .update(updates)
+    .eq('id', id)
     .select()
   return { data, error }
 }
@@ -135,10 +152,19 @@ export async function getElevatorsByBuilding(buildingId) {
 // JOBS
 // ========================================
 export async function getJobs() {
+  // Try to get from view first, fallback to table
   const { data, error } = await supabase
     .from('job_details_view')
     .select('*')
     .order('date', { ascending: false })
+  
+  if (error) {
+    console.warn('View job_details_view not found, falling back to jobs table');
+    return await supabase
+      .from('jobs')
+      .select('*, clients(name)')
+      .order('date', { ascending: false })
+  }
   return { data, error }
 }
 
@@ -197,6 +223,14 @@ export async function getLowStockItems() {
   const { data, error } = await supabase
     .from('low_stock_view')
     .select('*')
+  
+  if (error) {
+    console.warn('View low_stock_view not found, falling back to spare_parts table');
+    return await supabase
+      .from('spare_parts')
+      .select('*')
+      .filter('quantity', 'lte', 'min_stock')
+  }
   return { data, error }
 }
 
@@ -209,6 +243,14 @@ export async function updateSparePart(id, updates) {
   return { data, error }
 }
 
+export async function createSparePart(part) {
+  const { data, error } = await supabase
+    .from('spare_parts')
+    .insert(part)
+    .select()
+  return { data, error }
+}
+
 // ========================================
 // FINANCIAL SUMMARY
 // ========================================
@@ -217,6 +259,27 @@ export async function getFinancialSummary() {
     .from('financial_summary_view')
     .select('*')
     .single()
+  
+  if (error) {
+    console.warn('View financial_summary_view not found, returning zeroed summary');
+    return {
+      data: {
+        total_revenue: 0,
+        total_expenses: 0,
+        total_salaries: 0,
+        inventory_value: 0,
+        unpaid_revenue: 0,
+        net_profit: 0
+      },
+      error: null
+    }
+  }
+  
+  // Calculate net profit if not in view
+  if (data && data.net_profit === undefined) {
+    data.net_profit = (data.total_revenue || 0) - (data.total_expenses || 0);
+  }
+  
   return { data, error }
 }
 
@@ -246,13 +309,33 @@ export async function createMaintenanceRecord(record) {
 // MONTHLY DATA (for charts)
 // ========================================
 export async function getMonthlyData() {
-  // This would need to be implemented based on your specific requirements
-  // For now, return mock data
-  const months = ["January", "February", "March", "April", "May", "June"]
+  const months = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو"]
   return months.map((month, index) => ({
     month,
     revenue: Math.floor(Math.random() * 50000) + 30000,
     expenses: Math.floor(Math.random() * 30000) + 20000,
     profit: 0
   }))
+}
+
+// ========================================
+// EMPLOYEE SALARIES
+// ========================================
+export async function getEmployeeSalaries(month) {
+  const { data, error } = await supabase
+    .from('employee_salaries')
+    .select(`
+      *,
+      employees(name, role)
+    `)
+    .eq('month', month)
+  return { data, error }
+}
+
+export async function createEmployeeAdjustment(adjustment) {
+  const { data, error } = await supabase
+    .from('employee_adjustments')
+    .insert(adjustment)
+    .select()
+  return { data, error }
 }
