@@ -16,60 +16,52 @@ import {
 } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { getClients } from "@/lib/database";
+import { getClients, createClient, updateClient } from "@/lib/database"; // تأكد من وجود createClient و updateClient
 import { formatDate } from "@/lib/utils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, Edit2, Trash2, Download } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, Download, Loader2 } from "lucide-react";
 import * as XLSX from "xlsx";
-
-// Initial clients data with building info included
-const initialClients = [
-  { id: 1, name: "شركة النيل للتجارة", phone: "01012345678", email: "nile@example.com", address: "شارع التحرير، القاهرة", buildingName: "برج النيل", buildingType: "تجاري" },
-  { id: 2, name: "فندق الأهرام", phone: "01023456789", email: "pyramids@example.com", address: "الجيزة", buildingName: "فندق الأهرام", buildingType: "فندق" },
-  { id: 3, name: "مستشفى الشفاء", phone: "01034567890", email: "shifa@example.com", address: "مدينة نصر، القاهرة", buildingName: "مستشفى الشفاء", buildingType: "طبي" },
-  { id: 4, name: "مجمع السلام", phone: "01045678901", email: "salam@example.com", address: "الإسكندرية", buildingName: "برج السلام", buildingType: "سكني" },
-];
 
 export default function ClientsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddClientOpen, setIsAddClientOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
   const [clientsList, setClientsList] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const { data: clientsData } = await getClients();
-        setClientsList(clientsData || []);
-      } catch (error) {
-        console.error('Error fetching clients:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchData();
-  }, []);
+  const [isSaving, setIsSaving] = useState(false);
 
   const [clientForm, setClientForm] = useState({ 
     name: "", 
     phone: "", 
     email: "", 
     address: "",
-    buildingName: "",
+    buildingName: "", // ملاحظة: هذا يحتاج ربط بجدول buildings مستقبلاً
     buildingType: "سكني"
   });
 
+  // جلب البيانات عند تحميل الصفحة
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  async function fetchData() {
+    setLoading(true);
+    try {
+      const { data, error } = await getClients();
+      if (error) throw error;
+      setClientsList(data || []);
+    } catch (error) {
+      console.error('Error fetching clients:', error);
+    } finally {
+      setLoading(false);
+    }
+  }
+
   const filteredClients = clientsList.filter(
     (client) =>
-      client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.phone.includes(searchTerm) ||
-      client.buildingName.toLowerCase().includes(searchTerm.toLowerCase())
+      (client.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+      (client.phone || "").includes(searchTerm)
   );
-
-  const totalClients = clientsList.length;
 
   const handleAddClient = () => {
     setEditingClient(null);
@@ -80,63 +72,78 @@ export default function ClientsPage() {
   const handleEditClient = (client) => {
     setEditingClient(client);
     setClientForm({ 
-      name: client.name, 
-      phone: client.phone, 
-      email: client.email, 
-      address: client.address,
-      buildingName: client.buildingName,
-      buildingType: client.buildingType
+      name: client.name || "", 
+      phone: client.phone || "", 
+      email: client.email || "", 
+      address: client.address || "",
+      buildingName: client.buildingName || "",
+      buildingType: client.buildingType || "سكني"
     });
     setIsAddClientOpen(true);
   };
 
-  const handleSaveClient = () => {
-    if (editingClient) {
-      setClientsList(prev => prev.map(c => 
-        c.id === editingClient.id 
-          ? { ...c, ...clientForm }
-          : c
-      ));
-    } else {
-      const newId = Math.max(...clientsList.map(c => c.id), 0) + 1;
-      setClientsList(prev => [...prev, { id: newId, ...clientForm }]);
+  const handleSaveClient = async () => {
+    if (!clientForm.name) return alert("يرجى إدخال اسم العميل");
+    
+    setIsSaving(true);
+    try {
+      if (editingClient) {
+        // تحديث عميل موجود
+        const { error } = await updateClient(editingClient.id, {
+          name: clientForm.name,
+          phone: clientForm.phone,
+          email: clientForm.email,
+          address: clientForm.address,
+          // building_info: clientForm.buildingName // إذا أردت حفظ اسم المبنى مؤقتاً
+        });
+        if (error) throw error;
+      } else {
+        // إضافة عميل جديد
+        const { error } = await createClient({
+          name: clientForm.name,
+          phone: clientForm.phone,
+          email: clientForm.email,
+          address: clientForm.address,
+          is_active: true
+        });
+        if (error) throw error;
+      }
+      
+      await fetchData(); // تحديث القائمة
+      setIsAddClientOpen(false);
+    } catch (error) {
+      alert("حدث خطأ أثناء الحفظ: " + error.message);
+    } finally {
+      setIsSaving(false);
     }
-    setIsAddClientOpen(false);
   };
 
-  const handleDelete = (clientId) => {
+  const handleDelete = async (clientId) => {
     if (confirm("هل أنت متأكد من حذف هذا العميل؟")) {
-      setClientsList(prev => prev.filter(c => c.id !== clientId));
+      try {
+        const { error } = await updateClient(clientId, { is_active: false });
+        if (error) throw error;
+        setClientsList(prev => prev.filter(c => c.id !== clientId));
+      } catch (error) {
+        alert("خطأ في الحذف: " + error.message);
+      }
     }
   };
 
   const exportToExcel = () => {
-    const title = "قائمة العملاء";
-    const exportDate = new Date().toLocaleDateString("ar-EG");
-
-    // Build data with title, headers, data rows, and total row
     const data = [
-      [title], // Title row
-      ["تاريخ التصدير:", exportDate], // Date row
-      [], // Empty row
-      ["اسم العميل", "اسم المبنى", "رقم التليفون", "العنوان", "نوع المبنى"], // Headers
+      ["قائمة العملاء"],
+      ["تاريخ التصدير:", new Date().toLocaleDateString("ar-EG")],
+      [],
+      ["اسم العميل", "رقم التليفون", "العنوان", "البريد الإلكتروني"],
       ...clientsList.map((client) => [
         client.name,
-        client.buildingName,
         client.phone,
         client.address,
-        client.buildingType,
+        client.email
       ]),
-      [], // Empty row before total
-      ["إجمالي عدد العملاء:", clientsList.length, "", "", ""], // Total row
     ];
-
     const ws = XLSX.utils.aoa_to_sheet(data);
-    // Make title bold and larger
-    ws["A1"].s = { font: { bold: true, sz: 14 } };
-    // Make total row bold
-    ws["A" + (data.length)].s = { font: { bold: true } };
-
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "العملاء");
     XLSX.writeFile(wb, "العملاء.xlsx");
@@ -144,11 +151,10 @@ export default function ClientsPage() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">العملاء والمباني</h1>
-          <p className="text-gray-500 mt-1">إدارة بيانات العملاء والمباني والمصاعد</p>
+          <p className="text-gray-500 mt-1">إدارة بيانات العملاء والمباني</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={exportToExcel}>
@@ -162,88 +168,81 @@ export default function ClientsPage() {
         </div>
       </div>
 
-      {/* Summary Card */}
       <div className="grid gap-4 md:grid-cols-1">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-500">إجمالي العملاء</CardTitle>
+            <CardTitle className="text-sm font-medium text-gray-500">إجمالي العملاء المسجلين</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalClients}</div>
+            <div className="text-2xl font-bold">{loading ? "..." : clientsList.length}</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Search */}
       <div className="relative">
         <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
         <Input
-          placeholder="بحث عن عميل أو مبنى..."
+          placeholder="بحث عن عميل برقم الهاتف أو الاسم..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pr-10"
         />
       </div>
 
-      {/* Clients Table */}
       <Card>
         <CardContent className="p-0">
-          <Table className="border-black">
-            <TableHeader>
-              <TableRow>
-                <TableHead>اسم العميل</TableHead>
-                <TableHead>اسم المبنى</TableHead>
-                <TableHead>رقم التليفون</TableHead>
-                <TableHead>العنوان</TableHead>
-                <TableHead>نوع المبنى</TableHead>
-                <TableHead>الإجراءات</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredClients.map((client) => (
-                <TableRow key={client.id}>
-                  <TableCell className="font-medium">{client.name}</TableCell>
-                  <TableCell>{client.buildingName}</TableCell>
-                  <TableCell>{client.phone}</TableCell>
-                  <TableCell>{client.address}</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{client.buildingType}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button variant="ghost" size="icon" onClick={() => handleEditClient(client)}>
-                        <Edit2 className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(client.id)} className="text-red-500">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          {loading ? (
+            <div className="p-8 text-center text-gray-500">جاري تحميل البيانات...</div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>اسم العميل</TableHead>
+                  <TableHead>رقم التليفون</TableHead>
+                  <TableHead>العنوان</TableHead>
+                  <TableHead>الإجراءات</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredClients.length > 0 ? (
+                  filteredClients.map((client) => (
+                    <TableRow key={client.id}>
+                      <TableCell className="font-medium">{client.name}</TableCell>
+                      <TableCell>{client.phone || "---"}</TableCell>
+                      <TableCell>{client.address || "---"}</TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button variant="ghost" size="icon" onClick={() => handleEditClient(client)}>
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDelete(client.id)} className="text-red-500">
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={4} className="text-center py-4">لا يوجد عملاء مطابقين للبحث</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
-
-      {/* Add/Edit Client Dialog */}
       <Dialog open={isAddClientOpen} onOpenChange={setIsAddClientOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editingClient ? "تعديل بيانات العميل" : "إضافة عميل جديد"}</DialogTitle>
-            <DialogDescription>
-              {editingClient ? "تعديل بيانات العميل والمبنى" : "إضافة عميل جديد مع بيانات المبنى"}
-            </DialogDescription>
+            <DialogDescription>أدخل بيانات التواصل الخاصة بالعميل</DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label>اسم العميل</Label>
               <Input value={clientForm.name} onChange={(e) => setClientForm({ ...clientForm, name: e.target.value })} />
-            </div>
-            <div className="space-y-2">
-              <Label>اسم المبنى / البرج</Label>
-              <Input value={clientForm.buildingName} onChange={(e) => setClientForm({ ...clientForm, buildingName: e.target.value })} />
             </div>
             <div className="space-y-2">
               <Label>رقم الهاتف</Label>
@@ -254,24 +253,16 @@ export default function ClientsPage() {
               <Input value={clientForm.address} onChange={(e) => setClientForm({ ...clientForm, address: e.target.value })} />
             </div>
             <div className="space-y-2">
-              <Label>نوع المبنى</Label>
-              <Select value={clientForm.buildingType} onValueChange={(value) => setClientForm({ ...clientForm, buildingType: value })}>
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="سكني">سكني</SelectItem>
-                  <SelectItem value="تجاري">تجاري</SelectItem>
-                  <SelectItem value="طبي">طبي</SelectItem>
-                  <SelectItem value="فندقي">فندقي</SelectItem>
-                  <SelectItem value="تعليمي">تعليمي</SelectItem>
-                </SelectContent>
-              </Select>
+              <Label>البريد الإلكتروني (اختياري)</Label>
+              <Input value={clientForm.email} onChange={(e) => setClientForm({ ...clientForm, email: e.target.value })} />
             </div>
           </div>
           <DialogFooter>
             <DialogClose asChild><Button variant="outline">إلغاء</Button></DialogClose>
-            <Button onClick={handleSaveClient}>حفظ</Button>
+            <Button onClick={handleSaveClient} disabled={isSaving}>
+              {isSaving && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
+              {editingClient ? "تحديث" : "إضافة"}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
