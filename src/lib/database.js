@@ -309,13 +309,47 @@ export async function createMaintenanceRecord(record) {
 // MONTHLY DATA (for charts)
 // ========================================
 export async function getMonthlyData() {
-  const months = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو"]
-  return months.map((month, index) => ({
-    month,
-    revenue: Math.floor(Math.random() * 50000) + 30000,
-    expenses: Math.floor(Math.random() * 30000) + 20000,
-    profit: 0
-  }))
+  // Get transactions grouped by month
+  const { data: transactions, error } = await supabase
+    .from('transactions')
+    .select('*')
+    .order('date', { ascending: true })
+  
+  if (error) {
+    console.warn('Error fetching monthly data:', error);
+    return [];
+  }
+  
+  // Group transactions by month
+  const monthlyMap = {};
+  const monthNames = {
+    "01": "يناير", "02": "فبراير", "03": "مارس", "04": "أبريل",
+    "05": "مايو", "06": "يونيو", "07": "يوليو", "08": "أغسطس",
+    "09": "سبتمبر", "10": "أكتوبر", "11": "نوفمبر", "12": "ديسمبر"
+  };
+  
+  transactions.forEach(transaction => {
+    const date = new Date(transaction.date);
+    const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    const monthNum = String(date.getMonth() + 1).padStart(2, '0');
+    const monthName = monthNames[monthNum] || 'Unknown';
+    
+    if (!monthlyMap[monthKey]) {
+      monthlyMap[monthKey] = { month: monthName, revenue: 0, expenses: 0 };
+    }
+    
+    if (transaction.type === 'income') {
+      monthlyMap[monthKey].revenue += Number(transaction.amount) || 0;
+    } else if (transaction.type === 'expense') {
+      monthlyMap[monthKey].expenses += Number(transaction.amount) || 0;
+    }
+  });
+  
+  // Return last 6 months
+  return Object.values(monthlyMap).slice(-6).map(m => ({
+    ...m,
+    profit: m.revenue - m.expenses
+  }));
 }
 
 // ========================================
