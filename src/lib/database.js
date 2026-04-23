@@ -373,3 +373,43 @@ export async function createEmployeeAdjustment(adjustment) {
     .select()
   return { data, error }
 }
+// ========================================
+// SALES (عمليات البيع)
+// ========================================
+
+// جلب كل عمليات البيع مع ترتيبها من الأحدث للأقدم
+export async function getSales() {
+  const { data, error } = await supabase
+    .from('sales')
+    .select('*')
+    .order('date', { ascending: false });
+  return { data, error };
+}
+
+// إضافة عملية بيع جديدة
+export async function createSale(saleData) {
+  const { data, error } = await supabase
+    .from('sales')
+    .insert([saleData])
+    .select();
+  return { data, error };
+}
+
+// تحديث عملية بيع موجودة
+export async function updateSale(id, updates) {
+  const { data, error } = await supabase
+    .from('sales')
+    .update(updates)
+    .eq('id', id)
+    .select();
+  return { data, error };
+}
+
+// حذف عملية بيع
+export async function deleteSale(id) {
+  const { data, error } = await supabase
+    .from('sales')
+    .delete()
+    .eq('id', id);
+  return { data, error };
+}
