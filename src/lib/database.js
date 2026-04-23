@@ -126,20 +126,43 @@ export async function getLowStockItems() {
 // ========================================
 // المبيعات (Sales)
 // ========================================
+// ========================================
+// المبيعات (Sales)
+// ========================================
 export async function getSales() {
-  const { data, error } = await supabase.from('sales').select('*').order('date', { ascending: false });
+  const { data, error } = await supabase
+    .from('sales')
+    .select('*')
+    .order('date', { ascending: false });
   return { data, error };
 }
 
 export async function createSale(saleData) {
-  const { data, error } = await supabase.from('sales').insert([saleData]).select();
+  const { data, error } = await supabase
+    .from('sales')
+    .insert([saleData])
+    .select();
   return { data, error };
 }
 
 export async function updateSale(id, updates) {
-  const { data, error } = await supabase.from('sales').update(updates).eq('id', id).select();
+  const { data, error } = await supabase
+    .from('sales')
+    .update(updates)
+    .eq('id', id)
+    .select();
   return { data, error };
 }
+
+// هذه الدالة التي كانت تنقص وتسببت في فشل الـ Build
+export async function deleteSale(id) {
+  const { data, error } = await supabase
+    .from('sales')
+    .delete()
+    .eq('id', id);
+  return { data, error };
+}
+
 
 // ========================================
 // الإحصائيات (Financials)
