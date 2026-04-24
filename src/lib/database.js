@@ -1,8 +1,31 @@
 import { supabase } from './supabase'
 
+
+// --- المالية (Transactions) ---
+export async function getTransactions() {
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('*, clients(name)')
+    .order('date', { ascending: false });
+  return { data, error };
+}
+
+export async function createTransaction(t) {
+  return await supabase.from('transactions').insert([t]);
+}
+
+export async function updateTransaction(id, updates) {
+  return await supabase.from('transactions').update(updates).eq('id', id);
+}
+
+export async function deleteTransaction(id) {
+  return await supabase.from('transactions').delete().eq('id', id);
+}
+
 // ========================================
 // العملاء (Clients)
 // ========================================
+
 export async function getClients() {
   const { data, error } = await supabase
     .from('clients')
