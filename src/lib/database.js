@@ -54,8 +54,15 @@ export async function createEmployeeAdjustment(adj) {
 export async function getSpareParts() {
   return await supabase.from('spare_parts').select('*').order('name');
 }
+// الدالة اللي كانت ناقصة وتسببت في الخطأ
+export async function createSparePart(part) {
+  return await supabase.from('spare_parts').insert([part]);
+}
 export async function updateSparePart(id, updates) {
   return await supabase.from('spare_parts').update(updates).eq('id', id);
+}
+export async function deleteSparePart(id) {
+  return await supabase.from('spare_parts').delete().eq('id', id);
 }
 export async function getLowStockItems() {
   return await supabase.from('spare_parts').select('*').lt('quantity', 5);
@@ -112,4 +119,4 @@ export async function getFinancialSummary() {
 export async function getMonthlyData() {
   const { data } = await supabase.from('monthly_stats_view').select('*');
   return data || [];
-                             }
+}
