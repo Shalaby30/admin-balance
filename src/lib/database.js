@@ -74,9 +74,15 @@ export async function createEmployeeAdjustment(adj) {
 // ========================================
 // 4. المخزن (Inventory)
 // ========================================
+
 export async function getSpareParts() {
-  return await supabase.from('spare_parts').select('*').order('name');
+  return await supabase
+    .from('spare_parts')
+    .select('*')
+    .eq('is_active', true) // هذا السطر هو السر!
+    .order('name');
 }
+
 export async function createSparePart(part) {
   return await supabase.from('spare_parts').insert([part]);
 }
