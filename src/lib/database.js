@@ -14,23 +14,48 @@ export async function updateClient(id, updates) {
 }
 
 // ========================================
-// 2. الوظائف (Jobs)
+// 2. الوظائف (Jobs) - الربط مع المالية
 // ========================================
 export async function getJobs() {
-  return await supabase.from('jobs').select('*, clients(name)').order('date', { ascending: false });
+  // تم إزالة الربط المعقد لتجنب خطأ "not find clients column"
+  return await supabase.from('jobs').select('*').order('date', { ascending: false });
 }
+
 export async function createJob(job) {
   return await supabase.from('jobs').insert([job]);
 }
+
 export async function updateJob(id, updates) {
-  return await supabase.from('jobs').update(updates).eq('id', id);
+  // تنظيف البيانات من أي حقول زائدة تسبب أخطاء PATCH
+  const cleanUpdates = { ...updates };
+  delete cleanUpdates.clients;
+
+  const { data, error } = await supabase.from('jobs').update(cleanUpdates).eq('id', id).select().single();
+  
+  if (error) return { error };
+
+  // الربط التلقائي: إذا تحولت الحالة لمدفوع، سجل إيراد فوراً
+  if (cleanUpdates.payment_status === 'paid' && data) {
+    await createTransaction({
+      date: new Date().toISOString().split('T')[0],
+      type: 'income',
+      category: 'خدمات صيانة',
+      amount: data.total_price || data.cost || 0,
+      description: `تحصيل قيمة وظيفة رقم: ${id.slice(0, 8)}`,
+      payment_method: 'نقدي',
+      job_id: id,
+      client_id: data.client_id
+    });
+  }
+  return { data, error };
 }
+
 export async function deleteJob(id) {
   return await supabase.from('jobs').delete().eq('id', id);
 }
 
 // ========================================
-// 3. الموظفين والرواتب (Employees)
+// 3. الموظفين (Employees)
 // ========================================
 export async function getEmployees() {
   return await supabase.from('employees').select('*').order('name');
@@ -44,58 +69,89 @@ export async function updateEmployee(id, updates) {
 export async function deleteEmployee(id) {
   return await supabase.from('employees').delete().eq('id', id);
 }
-export async function createEmployeeAdjustment(adj) {
-  return await supabase.from('employee_adjustments').insert([adj]);
-}
 
 // ========================================
-// 4. المخزن وقطع الغيار (Inventory/Spare Parts)
+// 4. المخزن (Inventory) - الربط مع المالية عند الشراء
 // ========================================
 export async function getSpareParts() {
   return await supabase.from('spare_parts').select('*').order('name');
 }
-// الدالة اللي كانت ناقصة وتسببت في الخطأ
-export async function createSparePart(part) {
-  return await supabase.from('spare_parts').insert([part]);
+
+export async function createSparePart(part, purchaseCost = 0) {
+  const { data, error } = await supabase.from('spare_parts').insert([part]).select().single();
+  
+  if (error) return { error };
+
+  // إذا تم إدخال تكلفة شراء، سجلها كمصروف تلقائي
+  if (purchaseCost > 0) {
+    await createTransaction({
+      date: new Date().toISOString().split('T')[0],
+      type: 'expense',
+      category: 'مشتريات مخزن',
+      amount: purchaseCost,
+      description: `شراء بضاعة: ${part.name}`,
+      payment_method: 'نقدي'
+    });
+  }
+  return { data, error };
 }
+
 export async function updateSparePart(id, updates) {
   return await supabase.from('spare_parts').update(updates).eq('id', id);
 }
+
 export async function deleteSparePart(id) {
   return await supabase.from('spare_parts').delete().eq('id', id);
 }
-export async function getLowStockItems() {
-  return await supabase.from('spare_parts').select('*').lt('quantity', 5);
-}
 
 // ========================================
-// 5. المبيعات (Sales)
+// 5. المبيعات (Sales) - الربط مع المالية
 // ========================================
 export async function getSales() {
   return await supabase.from('sales').select('*, spare_parts(name)').order('date', { ascending: false });
 }
+
 export async function createSale(sale) {
-  return await supabase.from('sales').insert([sale]);
-}
-export async function updateSale(id, updates) {
-  return await supabase.from('sales').update(updates).eq('id', id);
-}
-export async function deleteSale(id) {
-  return await supabase.from('sales').delete().eq('id', id);
+  const { data, error } = await supabase.from('sales').insert([sale]).select().single();
+  
+  if (error) return { error };
+
+  // تسجيل عملية البيع كإيراد تلقائي في المالية
+  await createTransaction({
+    date: sale.date || new Date().toISOString().split('T')[0],
+    type: 'income',
+    category: 'مبيعات قطع غيار',
+    amount: sale.total_price,
+    description: `بيع قطعة غيار من المخزن`,
+    payment_method: 'نقدي',
+    client_id: sale.client_id
+  });
+
+  return { data, error };
 }
 
 // ========================================
 // 6. المالية (Transactions)
 // ========================================
 export async function getTransactions() {
-  return await supabase.from('transactions').select('*, clients(name)').order('date', { ascending: false });
+  return await supabase.from('transactions').select('*').order('date', { ascending: false });
 }
+
 export async function createTransaction(t) {
-  return await supabase.from('transactions').insert([t]);
+  // التوافق مع أعمدة الجدول في قاعدة البيانات
+  const transactionData = {
+    date: t.date || new Date().toISOString().split('T')[0],
+    type: t.type,
+    amount: parseFloat(t.amount),
+    description: t.description,
+    category: t.category,
+    payment_method: t.payment_method || 'نقدي',
+    job_id: t.job_id || null,
+    client_id: t.client_id || null
+  };
+  return await supabase.from('transactions').insert([transactionData]);
 }
-export async function updateTransaction(id, updates) {
-  return await supabase.from('transactions').update(updates).eq('id', id);
-}
+
 export async function deleteTransaction(id) {
   return await supabase.from('transactions').delete().eq('id', id);
 }
@@ -104,16 +160,26 @@ export async function deleteTransaction(id) {
 // 7. إحصائيات الداشبورد (Dashboard Stats)
 // ========================================
 export async function getFinancialSummary() {
-  const { data, error } = await supabase.from('financial_summary_view').select('*').single();
-  const formattedData = data ? {
-    totalRevenue: data.total_revenue || 0,
-    totalExpenses: data.total_expenses || 0,
-    netProfit: (data.total_revenue || 0) - (data.total_expenses || 0),
-    unpaidRevenue: data.unpaid_revenue || 0,
-    totalSalaries: data.total_salaries || 0,
-    inventoryValue: data.inventory_value || 0
-  } : { totalRevenue: 0, totalExpenses: 0, netProfit: 0, unpaidRevenue: 0, totalSalaries: 0, inventoryValue: 0 };
-  return { data: formattedData, error };
+  // حساب المجموع مباشرة من جدول المعاملات لضمان دقة الأرقام
+  const { data, error } = await supabase.from('transactions').select('amount, type');
+  
+  if (error) return { data: null, error };
+
+  const summary = data.reduce((acc, curr) => {
+    if (curr.type === 'income') acc.totalRevenue += curr.amount;
+    else if (curr.type === 'expense') acc.totalExpenses += curr.amount;
+    return acc;
+  }, { totalRevenue: 0, totalExpenses: 0 });
+
+  return { 
+    data: { 
+      ...summary, 
+      netProfit: summary.totalRevenue - summary.totalExpenses,
+      unpaidRevenue: 0, // يمكن ربطها بفلتر الـ jobs غير المدفوعة لاحقاً
+      inventoryValue: 0 
+    }, 
+    error: null 
+  };
 }
 
 export async function getMonthlyData() {
