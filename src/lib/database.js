@@ -22,6 +22,45 @@ export async function deleteTransaction(id) {
   return await supabase.from('transactions').delete().eq('id', id);
 }
 
+import { supabase } from './supabase'
+
+
+// --- ملخص لوحة التحكم (Financial Summary) ---
+export async function getFinancialSummary() {
+  // بما أنك تستخدم View في Supabase، نتأكد من مطابقة الأسماء
+  const { data, error } = await supabase.from('financial_summary_view').select('*').single();
+  
+  // تصحيح الأسماء لتطابق كود الـ Dashboard
+  const formattedData = data ? {
+    totalRevenue: data.total_revenue || 0,
+    totalExpenses: data.total_expenses || 0,
+    netProfit: (data.total_revenue || 0) - (data.total_expenses || 0),
+    unpaidRevenue: data.unpaid_revenue || 0,
+    totalSalaries: data.total_salaries || 0,
+    inventoryValue: data.inventory_value || 0
+  } : null;
+
+  return { data: formattedData, error };
+}
+
+export async function getMonthlyData() {
+  const { data } = await supabase.from('monthly_stats_view').select('*');
+  return data || [];
+}
+
+export async function getLowStockItems() {
+  return await supabase.from('spare_parts').select('*').lt('quantity', 5);
+}
+
+export async function getClients() {
+  return await supabase.from('clients').select('*').eq('is_active', true);
+}
+// ضفنا الدالة دي عشان Vercel Build ميزعلش
+export async function deleteSale(id) {
+  return await supabase.from('sales').delete().eq('id', id);
+}
+
+
 // ========================================
 // العملاء (Clients)
 // ========================================
