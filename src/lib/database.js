@@ -14,28 +14,21 @@ export async function updateClient(id, updates) {
 }
 
 // ========================================
-// 2. الوظائف (Jobs) - الربط مع المالية
+// 2. الوظائف (Jobs)
 // ========================================
 export async function getJobs() {
-  // تم إزالة الربط المعقد لتجنب خطأ "not find clients column"
   return await supabase.from('jobs').select('*').order('date', { ascending: false });
 }
-
 export async function createJob(job) {
   return await supabase.from('jobs').insert([job]);
 }
-
 export async function updateJob(id, updates) {
-  // تنظيف البيانات من أي حقول زائدة تسبب أخطاء PATCH
   const cleanUpdates = { ...updates };
   delete cleanUpdates.clients;
 
   const { data, error } = await supabase.from('jobs').update(cleanUpdates).eq('id', id).select().single();
   
-  if (error) return { error };
-
-  // الربط التلقائي: إذا تحولت الحالة لمدفوع، سجل إيراد فوراً
-  if (cleanUpdates.payment_status === 'paid' && data) {
+  if (!error && cleanUpdates.payment_status === 'paid' && data) {
     await createTransaction({
       date: new Date().toISOString().split('T')[0],
       type: 'income',
@@ -49,13 +42,12 @@ export async function updateJob(id, updates) {
   }
   return { data, error };
 }
-
 export async function deleteJob(id) {
   return await supabase.from('jobs').delete().eq('id', id);
 }
 
 // ========================================
-// 3. الموظفين (Employees)
+// 3. الموظفين والرواتب (Employees)
 // ========================================
 export async function getEmployees() {
   return await supabase.from('employees').select('*').order('name');
@@ -69,21 +61,20 @@ export async function updateEmployee(id, updates) {
 export async function deleteEmployee(id) {
   return await supabase.from('employees').delete().eq('id', id);
 }
+// الدالة التي كانت مفقودة وسببت خطأ Build
+export async function createEmployeeAdjustment(adj) {
+  return await supabase.from('employee_adjustments').insert([adj]);
+}
 
 // ========================================
-// 4. المخزن (Inventory) - الربط مع المالية عند الشراء
+// 4. المخزن (Inventory)
 // ========================================
 export async function getSpareParts() {
   return await supabase.from('spare_parts').select('*').order('name');
 }
-
 export async function createSparePart(part, purchaseCost = 0) {
   const { data, error } = await supabase.from('spare_parts').insert([part]).select().single();
-  
-  if (error) return { error };
-
-  // إذا تم إدخال تكلفة شراء، سجلها كمصروف تلقائي
-  if (purchaseCost > 0) {
+  if (!error && purchaseCost > 0) {
     await createTransaction({
       date: new Date().toISOString().split('T')[0],
       type: 'expense',
@@ -95,39 +86,45 @@ export async function createSparePart(part, purchaseCost = 0) {
   }
   return { data, error };
 }
-
 export async function updateSparePart(id, updates) {
   return await supabase.from('spare_parts').update(updates).eq('id', id);
 }
-
 export async function deleteSparePart(id) {
   return await supabase.from('spare_parts').delete().eq('id', id);
 }
+// الدالة التي كانت مفقودة وسببت خطأ Build
+export async function getLowStockItems() {
+  return await supabase.from('spare_parts').select('*').lt('quantity', 5);
+}
 
 // ========================================
-// 5. المبيعات (Sales) - الربط مع المالية
+// 5. المبيعات (Sales)
 // ========================================
 export async function getSales() {
   return await supabase.from('sales').select('*, spare_parts(name)').order('date', { ascending: false });
 }
-
 export async function createSale(sale) {
   const { data, error } = await supabase.from('sales').insert([sale]).select().single();
-  
-  if (error) return { error };
-
-  // تسجيل عملية البيع كإيراد تلقائي في المالية
-  await createTransaction({
-    date: sale.date || new Date().toISOString().split('T')[0],
-    type: 'income',
-    category: 'مبيعات قطع غيار',
-    amount: sale.total_price,
-    description: `بيع قطعة غيار من المخزن`,
-    payment_method: 'نقدي',
-    client_id: sale.client_id
-  });
-
+  if (!error) {
+    await createTransaction({
+      date: sale.date || new Date().toISOString().split('T')[0],
+      type: 'income',
+      category: 'مبيعات قطع غيار',
+      amount: sale.total_price,
+      description: `بيع قطعة غيار من المخزن`,
+      payment_method: 'نقدي',
+      client_id: sale.client_id
+    });
+  }
   return { data, error };
+}
+// الدالة التي كانت مفقودة وسببت خطأ Build
+export async function updateSale(id, updates) {
+  return await supabase.from('sales').update(updates).eq('id', id);
+}
+// الدالة التي كانت مفقودة وسببت خطأ Build
+export async function deleteSale(id) {
+  return await supabase.from('sales').delete().eq('id', id);
 }
 
 // ========================================
@@ -136,9 +133,7 @@ export async function createSale(sale) {
 export async function getTransactions() {
   return await supabase.from('transactions').select('*').order('date', { ascending: false });
 }
-
 export async function createTransaction(t) {
-  // التوافق مع أعمدة الجدول في قاعدة البيانات
   const transactionData = {
     date: t.date || new Date().toISOString().split('T')[0],
     type: t.type,
@@ -151,7 +146,10 @@ export async function createTransaction(t) {
   };
   return await supabase.from('transactions').insert([transactionData]);
 }
-
+// الدالة التي كانت مفقودة وسببت خطأ Build
+export async function updateTransaction(id, updates) {
+  return await supabase.from('transactions').update(updates).eq('id', id);
+}
 export async function deleteTransaction(id) {
   return await supabase.from('transactions').delete().eq('id', id);
 }
@@ -160,9 +158,7 @@ export async function deleteTransaction(id) {
 // 7. إحصائيات الداشبورد (Dashboard Stats)
 // ========================================
 export async function getFinancialSummary() {
-  // حساب المجموع مباشرة من جدول المعاملات لضمان دقة الأرقام
   const { data, error } = await supabase.from('transactions').select('amount, type');
-  
   if (error) return { data: null, error };
 
   const summary = data.reduce((acc, curr) => {
@@ -175,13 +171,12 @@ export async function getFinancialSummary() {
     data: { 
       ...summary, 
       netProfit: summary.totalRevenue - summary.totalExpenses,
-      unpaidRevenue: 0, // يمكن ربطها بفلتر الـ jobs غير المدفوعة لاحقاً
+      unpaidRevenue: 0, 
       inventoryValue: 0 
     }, 
     error: null 
   };
 }
-
 export async function getMonthlyData() {
   const { data } = await supabase.from('monthly_stats_view').select('*');
   return data || [];
