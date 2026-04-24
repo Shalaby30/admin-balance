@@ -14,17 +14,26 @@ export async function updateClient(id, updates) {
 }
 
 // ========================================
-// 2. الوظائف (Jobs)
+// 2. الوظائف (Jobs) - جلب اسم العميل والربط المالي
 // ========================================
 export async function getJobs() {
-  return await supabase.from('jobs').select('*').order('date', { ascending: false });
+  // جلب البيانات مع اسم العميل المرتبط
+  return await supabase
+    .from('jobs')
+    .select(`
+      *,
+      clients (name)
+    `)
+    .order('date', { ascending: false });
 }
+
 export async function createJob(job) {
   return await supabase.from('jobs').insert([job]);
 }
+
 export async function updateJob(id, updates) {
   const cleanUpdates = { ...updates };
-  delete cleanUpdates.clients;
+  delete cleanUpdates.clients; // تنظيف البيانات لتجنب تعارض الجداول
 
   const { data, error } = await supabase.from('jobs').update(cleanUpdates).eq('id', id).select().single();
   
@@ -42,6 +51,7 @@ export async function updateJob(id, updates) {
   }
   return { data, error };
 }
+
 export async function deleteJob(id) {
   return await supabase.from('jobs').delete().eq('id', id);
 }
@@ -61,19 +71,20 @@ export async function updateEmployee(id, updates) {
 export async function deleteEmployee(id) {
   return await supabase.from('employees').delete().eq('id', id);
 }
-// الدالة التي كانت مفقودة وسببت خطأ Build
 export async function createEmployeeAdjustment(adj) {
   return await supabase.from('employee_adjustments').insert([adj]);
 }
 
 // ========================================
-// 4. المخزن (Inventory)
+// 4. المخزن (Inventory) - الربط المالي عند الشراء
 // ========================================
 export async function getSpareParts() {
   return await supabase.from('spare_parts').select('*').order('name');
 }
+
 export async function createSparePart(part, purchaseCost = 0) {
   const { data, error } = await supabase.from('spare_parts').insert([part]).select().single();
+  
   if (!error && purchaseCost > 0) {
     await createTransaction({
       date: new Date().toISOString().split('T')[0],
@@ -86,25 +97,36 @@ export async function createSparePart(part, purchaseCost = 0) {
   }
   return { data, error };
 }
+
 export async function updateSparePart(id, updates) {
   return await supabase.from('spare_parts').update(updates).eq('id', id);
 }
+
 export async function deleteSparePart(id) {
   return await supabase.from('spare_parts').delete().eq('id', id);
 }
-// الدالة التي كانت مفقودة وسببت خطأ Build
+
 export async function getLowStockItems() {
   return await supabase.from('spare_parts').select('*').lt('quantity', 5);
 }
 
 // ========================================
-// 5. المبيعات (Sales)
+// 5. المبيعات (Sales) - جلب اسم العميل واسم القطعة
 // ========================================
 export async function getSales() {
-  return await supabase.from('sales').select('*, spare_parts(name)').order('date', { ascending: false });
+  return await supabase
+    .from('sales')
+    .select(`
+      *,
+      spare_parts (name),
+      clients (name)
+    `)
+    .order('date', { ascending: false });
 }
+
 export async function createSale(sale) {
   const { data, error } = await supabase.from('sales').insert([sale]).select().single();
+  
   if (!error) {
     await createTransaction({
       date: sale.date || new Date().toISOString().split('T')[0],
@@ -118,21 +140,28 @@ export async function createSale(sale) {
   }
   return { data, error };
 }
-// الدالة التي كانت مفقودة وسببت خطأ Build
+
 export async function updateSale(id, updates) {
   return await supabase.from('sales').update(updates).eq('id', id);
 }
-// الدالة التي كانت مفقودة وسببت خطأ Build
+
 export async function deleteSale(id) {
   return await supabase.from('sales').delete().eq('id', id);
 }
 
 // ========================================
-// 6. المالية (Transactions)
+// 6. المالية (Transactions) - جلب اسم العميل
 // ========================================
 export async function getTransactions() {
-  return await supabase.from('transactions').select('*').order('date', { ascending: false });
+  return await supabase
+    .from('transactions')
+    .select(`
+      *,
+      clients (name)
+    `)
+    .order('date', { ascending: false });
 }
+
 export async function createTransaction(t) {
   const transactionData = {
     date: t.date || new Date().toISOString().split('T')[0],
@@ -146,10 +175,11 @@ export async function createTransaction(t) {
   };
   return await supabase.from('transactions').insert([transactionData]);
 }
-// الدالة التي كانت مفقودة وسببت خطأ Build
+
 export async function updateTransaction(id, updates) {
   return await supabase.from('transactions').update(updates).eq('id', id);
 }
+
 export async function deleteTransaction(id) {
   return await supabase.from('transactions').delete().eq('id', id);
 }
@@ -159,6 +189,7 @@ export async function deleteTransaction(id) {
 // ========================================
 export async function getFinancialSummary() {
   const { data, error } = await supabase.from('transactions').select('amount, type');
+  
   if (error) return { data: null, error };
 
   const summary = data.reduce((acc, curr) => {
@@ -177,6 +208,7 @@ export async function getFinancialSummary() {
     error: null 
   };
 }
+
 export async function getMonthlyData() {
   const { data } = await supabase.from('monthly_stats_view').select('*');
   return data || [];
