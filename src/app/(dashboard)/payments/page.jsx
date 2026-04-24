@@ -11,14 +11,13 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-  DialogClose,
 } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getTransactions, getClients, createTransaction, updateTransaction, deleteTransaction } from "@/lib/database";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { Plus, Search, Download, ArrowDownLeft, ArrowUpRight, Edit2, Trash2, Loader2 } from "lucide-react";
+import { Plus, Search, Download, Edit2, Trash2, Loader2 } from "lucide-react";
 import * as XLSX from "xlsx";
 
 export default function PaymentsPage() {
@@ -70,6 +69,7 @@ export default function PaymentsPage() {
       date: formData.date,
       description: formData.description,
       client_id: formData.clientId !== "none" ? formData.clientId : null,
+      payment_method: "نقدي" // إضافة القيمة الافتراضية
     };
 
     try {
@@ -81,6 +81,7 @@ export default function PaymentsPage() {
       await fetchData();
       setIsAddDialogOpen(false);
       setIsEditDialogOpen(false);
+      setFormData({ type: "income", clientId: "none", amount: "", date: new Date().toISOString().split("T")[0], description: "" });
     } catch (error) {
       alert("خطأ في الحفظ");
     } finally {
@@ -95,16 +96,16 @@ export default function PaymentsPage() {
     }
   };
 
-  // --- دالة تصدير الإكسيل (رجعت اهي!) ---
   const exportToExcel = () => {
     const data = [
       ["تقرير المعاملات المالية"],
       ["تاريخ التقرير:", new Date().toLocaleDateString("ar-EG")],
       [],
-      ["التاريخ", "النوع", "الوصف", "المبلغ"],
+      ["التاريخ", "النوع", "العميل", "الوصف", "المبلغ"],
       ...transactionsList.map(t => [
         formatDate(t.date),
         t.type === "income" ? "إيراد" : "مصروف",
+        t.clients?.name || "عميل نقدي",
         t.description,
         t.amount
       ])
@@ -116,7 +117,8 @@ export default function PaymentsPage() {
   };
 
   const filteredTransactions = transactionsList.filter((t) => {
-    const matchesSearch = (t.description || "").toLowerCase().includes(searchTerm.toLowerCase());
+    const searchStr = (t.description || "") + (t.clients?.name || "");
+    const matchesSearch = searchStr.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesType = typeFilter === "all" || t.type === typeFilter;
     return matchesSearch && matchesType;
   });
@@ -144,7 +146,6 @@ export default function PaymentsPage() {
         </div>
       </div>
 
-      {/* Cards */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card><CardContent className="pt-6">
           <div className="text-sm font-medium text-gray-500">إجمالي الإيرادات</div>
@@ -161,7 +162,10 @@ export default function PaymentsPage() {
       </div>
 
       <div className="flex gap-4">
-        <Input placeholder="بحث..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="flex-1" />
+        <div className="relative flex-1">
+          <Search className="absolute right-3 top-2.5 h-4 w-4 text-gray-400" />
+          <Input placeholder="بحث في الوصف أو اسم العميل..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pr-10" />
+        </div>
         <Select value={typeFilter} onValueChange={setTypeFilter}>
           <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
           <SelectContent>
@@ -178,6 +182,7 @@ export default function PaymentsPage() {
             <TableRow>
               <TableHead>التاريخ</TableHead>
               <TableHead>النوع</TableHead>
+              <TableHead>العميل</TableHead>
               <TableHead>الوصف</TableHead>
               <TableHead>المبلغ</TableHead>
               <TableHead>الإجراءات</TableHead>
@@ -185,13 +190,14 @@ export default function PaymentsPage() {
           </TableHeader>
           <TableBody>
             {loading ? (
-              <TableRow><TableCell colSpan={5} className="text-center">جاري التحميل...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="text-center">جاري التحميل...</TableCell></TableRow>
             ) : filteredTransactions.map((t) => (
               <TableRow key={t.id}>
                 <TableCell>{formatDate(t.date)}</TableCell>
                 <TableCell><Badge variant={t.type === "income" ? "success" : "destructive"}>{t.type === "income" ? "إيراد" : "مصروف"}</Badge></TableCell>
+                <TableCell className="font-medium">{t.clients?.name || "عميل نقدي"}</TableCell>
                 <TableCell>{t.description}</TableCell>
-                <TableCell className={t.type === "income" ? "text-green-600" : "text-red-600"}>{formatCurrency(t.amount)}</TableCell>
+                <TableCell className={t.type === "income" ? "text-green-600 font-bold" : "text-red-600 font-bold"}>{formatCurrency(t.amount)}</TableCell>
                 <TableCell>
                   <div className="flex gap-2">
                     <Button variant="ghost" size="icon" onClick={() => { setEditingTransaction(t); setFormData({ ...t, clientId: t.client_id || "none" }); setIsEditDialogOpen(true); }}><Edit2 className="h-4 w-4" /></Button>
@@ -204,8 +210,7 @@ export default function PaymentsPage() {
         </Table>
       </Card>
 
-      {/* Dialogs (Add/Edit) */}
-      <Dialog open={isAddDialogOpen || isEditDialogOpen} onOpenChange={(val) => { setIsAddDialogOpen(val); setIsEditDialogOpen(val); }}>
+      <Dialog open={isAddDialogOpen || isEditDialogOpen} onOpenChange={(val) => { setIsAddDialogOpen(val); setIsEditDialogOpen(val); if(!val) setEditingTransaction(null); }}>
         <DialogContent>
           <DialogHeader><DialogTitle>{editingTransaction ? "تعديل" : "إضافة"} معاملة</DialogTitle></DialogHeader>
           <div className="space-y-4 py-4">
@@ -219,12 +224,26 @@ export default function PaymentsPage() {
               </div>
               <div className="space-y-2">
                 <Label>المبلغ</Label>
-                <Input type="number" value={formData.amount} onChange={(e) => setFormData({...formData, amount: e.target.value})} />
+                <Input type="number" value={formData.amount} onChange={(e) => setFormData({...formData, amount: e.target.value})} placeholder="0.00" />
               </div>
             </div>
+            
+            <div className="space-y-2">
+              <Label>العميل (اختياري)</Label>
+              <Select value={formData.clientId} onValueChange={(v) => setFormData({...formData, clientId: v})}>
+                <SelectTrigger><SelectValue placeholder="اختر العميل" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">عميل نقدي / عام</SelectItem>
+                  {clientsList.map(c => (
+                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="space-y-2">
               <Label>الوصف</Label>
-              <Input value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} />
+              <Input value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} placeholder="مثلاً: صيانة مصعد، شراء قطع.." />
             </div>
             <div className="space-y-2">
               <Label>التاريخ</Label>
@@ -232,9 +251,9 @@ export default function PaymentsPage() {
             </div>
           </div>
           <DialogFooter>
-            <Button onClick={handleSave} disabled={isSaving}>
+            <Button onClick={handleSave} disabled={isSaving} className="w-full">
               {isSaving && <Loader2 className="ml-2 h-4 w-4 animate-spin" />}
-              حفظ
+              {editingTransaction ? "تحديث المعاملة" : "حفظ المعاملة"}
             </Button>
           </DialogFooter>
         </DialogContent>
