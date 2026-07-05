@@ -1,0 +1,143 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-sans: "Cairo", "Inter", system-ui, sans-serif;
+  --font-inter: "Inter", system-ui, sans-serif;
+
+  --color-background: oklch(0.985 0.002 247);
+  --color-foreground: oklch(0.145 0.02 265);
+  --color-card: oklch(1 0 0 / 0.72);
+  --color-card-foreground: oklch(0.145 0.02 265);
+  --color-popover: oklch(1 0 0 / 0.95);
+  --color-popover-foreground: oklch(0.145 0.02 265);
+  --color-primary: oklch(0.55 0.2 264);
+  --color-primary-foreground: oklch(0.985 0 0);
+  --color-secondary: oklch(0.96 0.01 265);
+  --color-secondary-foreground: oklch(0.25 0.02 265);
+  --color-muted: oklch(0.96 0.005 265);
+  --color-muted-foreground: oklch(0.52 0.02 265);
+  --color-accent: oklch(0.94 0.02 264);
+  --color-accent-foreground: oklch(0.25 0.02 265);
+  --color-destructive: oklch(0.577 0.245 27.325);
+  --color-destructive-foreground: oklch(0.985 0 0);
+  --color-border: oklch(0.91 0.01 265 / 0.6);
+  --color-input: oklch(0.91 0.01 265 / 0.5);
+  --color-ring: oklch(0.55 0.2 264);
+  --color-success: oklch(0.62 0.17 155);
+  --color-warning: oklch(0.75 0.15 75);
+  --color-info: oklch(0.6 0.15 240);
+  --color-glass: oklch(1 0 0 / 0.55);
+  --color-glass-border: oklch(1 0 0 / 0.25);
+  --color-sidebar: oklch(0.98 0.005 265 / 0.85);
+  --color-sidebar-foreground: oklch(0.35 0.02 265);
+  --color-sidebar-active: oklch(0.55 0.2 264 / 0.12);
+  --color-chart-1: oklch(0.55 0.2 264);
+  --color-chart-2: oklch(0.62 0.17 155);
+  --color-chart-3: oklch(0.75 0.15 75);
+  --color-chart-4: oklch(0.65 0.2 320);
+  --color-chart-5: oklch(0.6 0.18 200);
+
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+}
+
+.dark {
+  --color-background: oklch(0.13 0.02 265);
+  --color-foreground: oklch(0.96 0.005 265);
+  --color-card: oklch(0.18 0.025 265 / 0.65);
+  --color-card-foreground: oklch(0.96 0.005 265);
+  --color-popover: oklch(0.17 0.025 265 / 0.95);
+  --color-popover-foreground: oklch(0.96 0.005 265);
+  --color-primary: oklch(0.65 0.2 264);
+  --color-primary-foreground: oklch(0.985 0 0);
+  --color-secondary: oklch(0.22 0.025 265);
+  --color-secondary-foreground: oklch(0.92 0.005 265);
+  --color-muted: oklch(0.22 0.025 265);
+  --color-muted-foreground: oklch(0.65 0.02 265);
+  --color-accent: oklch(0.24 0.03 265);
+  --color-accent-foreground: oklch(0.96 0.005 265);
+  --color-destructive: oklch(0.577 0.245 27.325);
+  --color-destructive-foreground: oklch(0.985 0 0);
+  --color-border: oklch(0.28 0.025 265 / 0.5);
+  --color-input: oklch(0.28 0.025 265 / 0.6);
+  --color-ring: oklch(0.65 0.2 264);
+  --color-success: oklch(0.68 0.17 155);
+  --color-warning: oklch(0.78 0.15 75);
+  --color-info: oklch(0.65 0.15 240);
+  --color-glass: oklch(0.2 0.025 265 / 0.55);
+  --color-glass-border: oklch(1 0 0 / 0.08);
+  --color-sidebar: oklch(0.15 0.025 265 / 0.85);
+  --color-sidebar-foreground: oklch(0.75 0.02 265);
+  --color-sidebar-active: oklch(0.65 0.2 264 / 0.15);
+  --color-chart-1: oklch(0.65 0.2 264);
+  --color-chart-2: oklch(0.68 0.17 155);
+  --color-chart-3: oklch(0.78 0.15 75);
+  --color-chart-4: oklch(0.7 0.2 320);
+  --color-chart-5: oklch(0.65 0.18 200);
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.glass {
+  background: var(--color-glass);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid var(--color-glass-border);
+}
+
+.gradient-bg {
+  background:
+    radial-gradient(ellipse 80% 50% at 20% -10%, oklch(0.55 0.2 264 / 0.15), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 110%, oklch(0.62 0.17 155 / 0.1), transparent),
+    var(--color-background);
+}
+
+.dark .gradient-bg {
+  background:
+    radial-gradient(ellipse 80% 50% at 20% -10%, oklch(0.55 0.2 264 / 0.12), transparent),
+    radial-gradient(ellipse 60% 40% at 80% 110%, oklch(0.62 0.17 155 / 0.08), transparent),
+    var(--color-background);
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-muted-foreground);
+  border-radius: 999px;
+  opacity: 0.3;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  opacity: 0.5;
+}
+
+.recharts-cartesian-grid-horizontal line,
+.recharts-cartesian-grid-vertical line {
+  stroke: var(--color-border);
+}
+
+.recharts-text {
+  fill: var(--color-muted-foreground);
+  font-size: 12px;
+}
